@@ -1,5 +1,5 @@
 @description('Location for all resources')
-param location string = resourceGroup().location
+param location string = 'East US 2'
 
 @description('Environment name (dev, staging, prod)')
 param environment string = 'dev'
@@ -8,25 +8,25 @@ param environment string = 'dev'
 param appName string = 'ecommerce'
 
 @description('Container Apps Environment name')
-param containerAppsEnvironmentName string = '${appName}-${environment}-env'
+param containerAppsEnvironmentName string = '${appName}-${environment}-env-${take(uniqueString(resourceGroup().id), 6)}'
 
 @description('Log Analytics Workspace name')
-param logAnalyticsWorkspaceName string = '${appName}-${environment}-logs'
+param logAnalyticsWorkspaceName string = '${appName}-${environment}-logs-${take(uniqueString(resourceGroup().id), 6)}'
 
 @description('Application Insights name')
-param appInsightsName string = '${appName}-${environment}-insights'
+param appInsightsName string = '${appName}-${environment}-ai-${take(uniqueString(resourceGroup().id), 6)}'
 
 @description('Azure Container Registry name')
-param acrName string = '${appName}${environment}acr'
+param acrName string = '${appName}${environment}${take(uniqueString(resourceGroup().id), 6)}'
 
 @description('PostgreSQL server name')
-param postgresServerName string = '${appName}-${environment}-postgres'
+param postgresServerName string = '${appName}-${environment}-pg-${take(uniqueString(resourceGroup().id), 6)}'
 
 @description('Redis cache name')
-param redisCacheName string = '${appName}-${environment}-redis'
+param redisCacheName string = '${appName}-${environment}-redis-${take(uniqueString(resourceGroup().id), 6)}'
 
 @description('Key Vault name')
-param keyVaultName string = '${appName}-${environment}-kv'
+param keyVaultName string = '${appName}-${environment}-${take(uniqueString(resourceGroup().id), 6)}-kv'
 
 @description('Virtual Network name')
 param vnetName string = '${appName}-${environment}-vnet'
@@ -56,7 +56,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-05-01' = {
       {
         name: containerAppsSubnetName
         properties: {
-          addressPrefix: '10.0.1.0/24'
+          addressPrefix: '10.0.0.0/23'
           delegations: [
             {
               name: 'containerAppsDelegation'
@@ -117,6 +117,34 @@ resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
   }
   properties: {
     adminUserEnabled: true
+  }
+}
+
+// User-assigned managed identity for container apps
+resource userManagedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: '${appName}-${environment}-identity'
+  location: location
+}
+
+// Key Vault Secrets User role assignment for the managed identity
+resource keyVaultSecretsUserRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: keyVault
+  name: guid(keyVault.id, userManagedIdentity.id, 'Key Vault Secrets User')
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6') // Key Vault Secrets User
+    principalId: userManagedIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// ACR Pull role assignment for the managed identity
+resource acrPullRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: acr
+  name: guid(acr.id, userManagedIdentity.id, 'AcrPull')
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d') // AcrPull
+    principalId: userManagedIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
   }
 }
 
@@ -226,6 +254,32 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     enableRbacAuthorization: true
     enableSoftDelete: true
     softDeleteRetentionInDays: 7
+    enablePurgeProtection: false
+  }
+}
+
+// Store secrets in Key Vault
+resource postgresConnectionStringSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: 'postgres-connection-string'
+  properties: {
+    value: 'postgresql://${postgresAdminUsername}:${postgresAdminPassword}@${postgresServer.properties.fullyQualifiedDomainName}:5432/ecommerce?sslmode=require'
+  }
+}
+
+resource redisConnectionStringSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: 'redis-connection-string'
+  properties: {
+    value: '${redisCache.properties.hostName}:6380,ssl=true,password=${redisCache.listKeys().primaryKey}'
+  }
+}
+
+resource redisPasswordSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: 'redis-password'
+  properties: {
+    value: redisCache.listKeys().primaryKey
   }
 }
 
@@ -234,9 +288,12 @@ module daprComponents 'modules/dapr-components.bicep' = {
   name: 'dapr-components'
   params: {
     containerAppsEnvironmentName: containerAppsEnvironment.name
-    redisCacheConnectionString: 'redis:6380,ssl=true,password=${redisCache.listKeys().primaryKey}'
+    redisCacheConnectionString: '${redisCache.properties.hostName}:6380,ssl=true,password=${redisCache.listKeys().primaryKey}'
     keyVaultName: keyVault.name
   }
+  dependsOn: [
+    redisPasswordSecret
+  ]
 }
 
 // Container Apps
@@ -249,7 +306,17 @@ module containerApps 'modules/container-apps.bicep' = {
     containerAppsEnvironmentId: containerAppsEnvironment.id
     acrName: acr.name
     appInsightsConnectionString: appInsights.properties.ConnectionString
+    keyVaultName: keyVault.name
+    redisCacheHostName: redisCache.properties.hostName
+    userManagedIdentityId: userManagedIdentity.id
   }
+  dependsOn: [
+    postgresConnectionStringSecret
+    redisConnectionStringSecret
+    redisPasswordSecret
+    keyVaultSecretsUserRoleAssignment
+    acrPullRoleAssignment
+  ]
 }
 
 // Outputs
@@ -259,3 +326,5 @@ output postgresServerFqdn string = postgresServer.properties.fullyQualifiedDomai
 output redisCacheHostName string = redisCache.properties.hostName
 output keyVaultUri string = keyVault.properties.vaultUri
 output appInsightsConnectionString string = appInsights.properties.ConnectionString
+output frontendUrl string = containerApps.outputs.frontendUrl
+output orderServiceUrl string = containerApps.outputs.orderServiceUrl

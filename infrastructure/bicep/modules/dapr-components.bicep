@@ -30,7 +30,7 @@ resource stateStoreComponent 'Microsoft.App/managedEnvironments/daprComponents@2
     secrets: [
       {
         name: 'redis-password'
-        keyVaultUrl: 'https://${keyVaultName}.vault.azure.net/secrets/redis-password'
+        keyVaultUrl: 'https://${keyVaultName}.${environment().suffixes.keyvaultDns}/secrets/redis-password'
         identity: 'system'
       }
     ]
@@ -60,7 +60,7 @@ resource pubSubComponent 'Microsoft.App/managedEnvironments/daprComponents@2023-
     secrets: [
       {
         name: 'redis-password'
-        keyVaultUrl: 'https://${keyVaultName}.vault.azure.net/secrets/redis-password'
+        keyVaultUrl: 'https://${keyVaultName}.${environment().suffixes.keyvaultDns}/secrets/redis-password'
         identity: 'system'
       }
     ]

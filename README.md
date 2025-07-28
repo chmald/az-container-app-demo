@@ -67,20 +67,36 @@ This demo implements a modern microservices architecture with the following comp
 1. **Deploy infrastructure**
    ```bash
    cd infrastructure/bicep
-   az deployment group create --resource-group your-rg --template-file main.bicep --parameters @parameters.json
+   
+   # Create resource group if it doesn't exist
+   az group create --name az-container-apps-demo --location "East US 2"
+   
+   # Deploy the infrastructure
+   az deployment group create \
+     --resource-group az-container-apps-demo \
+     --template-file main.bicep \
+     --parameters @parameters.json
    ```
 
 2. **Build and push container images**
    ```bash
-   # Set your container registry
-   export ACR_NAME=your-acr-name
+   # Get your container registry name from deployment output
+   export ACR_NAME=$(az deployment group show --resource-group az-container-apps-demo --name main --query properties.outputs.acrLoginServer.value -o tsv | cut -d'.' -f1)
+   
+   # Login to ACR
+   az acr login --name $ACR_NAME
+   
+   # Build and push images
    ./scripts/build-and-push.sh
    ```
 
-3. **Deploy applications**
+3. **Deploy applications** (if using manual deployment)
    ```bash
-   az containerapp update --name frontend --resource-group your-rg --image $ACR_NAME.azurecr.io/frontend:latest
-   # Repeat for other services...
+   # Update container apps with new images
+   az containerapp update --name ecommerce-dev-frontend --resource-group az-container-apps-demo --image $ACR_NAME.azurecr.io/frontend:latest
+   az containerapp update --name ecommerce-dev-order-service --resource-group az-container-apps-demo --image $ACR_NAME.azurecr.io/order-service:latest
+   az containerapp update --name ecommerce-dev-inventory-service --resource-group az-container-apps-demo --image $ACR_NAME.azurecr.io/inventory-service:latest
+   az containerapp update --name ecommerce-dev-notification-service --resource-group az-container-apps-demo --image $ACR_NAME.azurecr.io/notification-service:latest
    ```
 
 ## 📁 Project Structure
@@ -204,6 +220,30 @@ For issues and questions:
 - Check the [troubleshooting guide](docs/troubleshooting.md)
 - Open an issue on GitHub
 - Review the [Azure Container Apps documentation](https://docs.microsoft.com/en-us/azure/container-apps/)
+
+### Common Deployment Issues
+
+**Location Restrictions**: If you encounter location restrictions, try these regions:
+- East US 2
+- Central US
+- West Europe
+- Southeast Asia
+
+**Naming Conflicts**: Resource names are made unique with a 6-character suffix. If you still encounter conflicts, delete any soft-deleted resources:
+```bash
+# List and purge soft-deleted Key Vaults
+az keyvault list-deleted --query "[].name" -o table
+az keyvault purge --name <vault-name> --location <location>
+```
+
+**Subnet Size**: Container Apps require a minimum /23 subnet (512 addresses). The template uses /23 by default.
+
+**Resource Provider Registration**: Ensure required providers are registered:
+```bash
+az provider register --namespace Microsoft.App --wait
+az provider register --namespace Microsoft.ContainerService --wait
+az provider register --namespace Microsoft.DBforPostgreSQL --wait
+```
 
 ---
 

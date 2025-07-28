@@ -16,6 +16,21 @@ param acrName string
 @description('Application Insights connection string')
 param appInsightsConnectionString string
 
+@description('Key Vault name')
+param keyVaultName string
+
+@description('Redis cache hostname')
+param redisCacheHostName string
+
+@description('User-assigned managed identity ID')
+param userManagedIdentityId string
+
+// Get the Container Apps Environment to access its domain
+resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-05-01' existing = {
+  name: split(containerAppsEnvironmentId, '/')[8]
+}
+
+var containerAppsEnvironmentDomain = containerAppsEnvironment.properties.defaultDomain
 var frontendAppName = '${appName}-${environment}-frontend'
 var orderServiceAppName = '${appName}-${environment}-order-service'
 var inventoryServiceAppName = '${appName}-${environment}-inventory-service'
@@ -43,7 +58,7 @@ resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
       registries: [
         {
           server: '${acrName}.azurecr.io'
-          identity: 'system'
+          identity: userManagedIdentityId
         }
       ]
     }
@@ -101,7 +116,10 @@ resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
     }
   }
   identity: {
-    type: 'SystemAssigned'
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${userManagedIdentityId}': {}
+    }
   }
 }
 
@@ -133,7 +151,14 @@ resource orderServiceApp 'Microsoft.App/containerApps@2023-05-01' = {
       registries: [
         {
           server: '${acrName}.azurecr.io'
-          identity: 'system'
+          identity: userManagedIdentityId
+        }
+      ]
+      secrets: [
+        {
+          name: 'postgres-connection-string'
+          keyVaultUrl: 'https://${keyVaultName}.${az.environment().suffixes.keyvaultDns}/secrets/postgres-connection-string'
+          identity: userManagedIdentityId
         }
       ]
     }
@@ -158,6 +183,22 @@ resource orderServiceApp 'Microsoft.App/containerApps@2023-05-01' = {
             {
               name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
               value: appInsightsConnectionString
+            }
+            {
+              name: 'DATABASE_URL'
+              secretRef: 'postgres-connection-string'
+            }
+            {
+              name: 'REDIS_HOST'
+              value: redisCacheHostName
+            }
+            {
+              name: 'REDIS_PORT'
+              value: '6380'
+            }
+            {
+              name: 'REDIS_SSL'
+              value: 'true'
             }
           ]
           probes: [
@@ -199,7 +240,10 @@ resource orderServiceApp 'Microsoft.App/containerApps@2023-05-01' = {
     }
   }
   identity: {
-    type: 'SystemAssigned'
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${userManagedIdentityId}': {}
+    }
   }
 }
 
@@ -230,7 +274,14 @@ resource inventoryServiceApp 'Microsoft.App/containerApps@2023-05-01' = {
       registries: [
         {
           server: '${acrName}.azurecr.io'
-          identity: 'system'
+          identity: userManagedIdentityId
+        }
+      ]
+      secrets: [
+        {
+          name: 'postgres-connection-string'
+          keyVaultUrl: 'https://${keyVaultName}.${az.environment().suffixes.keyvaultDns}/secrets/postgres-connection-string'
+          identity: userManagedIdentityId
         }
       ]
     }
@@ -255,6 +306,22 @@ resource inventoryServiceApp 'Microsoft.App/containerApps@2023-05-01' = {
             {
               name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
               value: appInsightsConnectionString
+            }
+            {
+              name: 'DATABASE_URL'
+              secretRef: 'postgres-connection-string'
+            }
+            {
+              name: 'REDIS_HOST'
+              value: redisCacheHostName
+            }
+            {
+              name: 'REDIS_PORT'
+              value: '6380'
+            }
+            {
+              name: 'REDIS_SSL'
+              value: 'true'
             }
           ]
           probes: [
@@ -296,7 +363,10 @@ resource inventoryServiceApp 'Microsoft.App/containerApps@2023-05-01' = {
     }
   }
   identity: {
-    type: 'SystemAssigned'
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${userManagedIdentityId}': {}
+    }
   }
 }
 
@@ -327,7 +397,7 @@ resource notificationServiceApp 'Microsoft.App/containerApps@2023-05-01' = {
       registries: [
         {
           server: '${acrName}.azurecr.io'
-          identity: 'system'
+          identity: userManagedIdentityId
         }
       ]
     }
@@ -397,16 +467,12 @@ resource notificationServiceApp 'Microsoft.App/containerApps@2023-05-01' = {
     }
   }
   identity: {
-    type: 'SystemAssigned'
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${userManagedIdentityId}': {}
+    }
   }
 }
-
-// Get the Container Apps Environment domain
-resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-05-01' existing = {
-  name: split(containerAppsEnvironmentId, '/')[8]
-}
-
-var containerAppsEnvironmentDomain = containerAppsEnvironment.properties.defaultDomain
 
 output frontendUrl string = 'https://${frontendApp.properties.configuration.ingress.fqdn}'
 output orderServiceUrl string = 'https://${orderServiceApp.properties.configuration.ingress.fqdn}'
