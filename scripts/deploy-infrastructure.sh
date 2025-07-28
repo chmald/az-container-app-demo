@@ -6,7 +6,7 @@
 set -e
 
 RESOURCE_GROUP=${1:-"rg-ecommerce-dev"}
-LOCATION=${2:-"East US"}
+LOCATION=${2:-"West US 3"}
 POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-"YourSecurePassword123!"}
 
 echo "Deploying infrastructure to Resource Group: $RESOURCE_GROUP in $LOCATION"

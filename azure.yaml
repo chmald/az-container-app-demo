@@ -1,0 +1,114 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+
+name: az-container-app-demo
+metadata:
+  template: az-container-app-demo@0.0.1-beta
+services:
+  frontend:
+    project: ./src/frontend
+    language: ts
+    host: containerapp
+    docker:
+      path: ./Dockerfile
+      context: ./
+    hooks:
+      prebuild:
+        shell: sh
+        run: |
+          if [ "$AZURE_ENV_NAME" != "" ]; then
+            azd env get-values > .env
+          fi
+      postdeploy:
+        shell: sh
+        run: echo "Frontend deployed successfully"
+  order-service:
+    project: ./src/order-service
+    language: ts
+    host: containerapp
+    docker:
+      path: ./Dockerfile
+      context: ./
+    hooks:
+      prebuild:
+        shell: sh
+        run: |
+          if [ "$AZURE_ENV_NAME" != "" ]; then
+            azd env get-values > .env
+          fi
+      postdeploy:
+        shell: sh
+        run: echo "Order service deployed successfully"
+  inventory-service:
+    project: ./src/inventory-service
+    language: python
+    host: containerapp
+    docker:
+      path: ./Dockerfile
+      context: ./
+    hooks:
+      prebuild:
+        shell: sh
+        run: |
+          if [ "$AZURE_ENV_NAME" != "" ]; then
+            azd env get-values > .env
+          fi
+      postdeploy:
+        shell: sh
+        run: echo "Inventory service deployed successfully"
+  notification-service:
+    project: ./src/notification-service
+    language: js
+    host: containerapp
+    docker:
+      path: ./Dockerfile
+      context: ./
+    hooks:
+      prebuild:
+        shell: sh
+        run: |
+          if [ "$AZURE_ENV_NAME" != "" ]; then
+            azd env get-values > .env
+          fi
+      postdeploy:
+        shell: sh
+        run: echo "Notification service deployed successfully"
+
+hooks:
+  preprovision:
+    shell: sh
+    run: |
+      echo "Starting infrastructure provisioning..."
+      echo "Resource group: $AZURE_RESOURCE_GROUP_NAME"
+      echo "Location: $AZURE_LOCATION"
+  postprovision:
+    shell: sh
+    run: |
+      echo "Infrastructure provisioned successfully"
+      echo "Container registry: $AZURE_CONTAINER_REGISTRY_ENDPOINT"
+  prepackage:
+    shell: sh
+    run: echo "Packaging application..."
+  postpackage:
+    shell: sh
+    run: echo "Application packaged successfully"
+  predeploy:
+    shell: sh
+    run: |
+      if [ "$OS" = "Windows_NT" ]; then
+        ./scripts/predeploy.bat
+      else
+        ./scripts/predeploy.sh
+      fi
+  postdeploy:
+    shell: sh
+    run: |
+      if [ "$OS" = "Windows_NT" ]; then
+        ./scripts/postdeploy.bat
+      else
+        ./scripts/postdeploy.sh
+      fi
+
+infra:
+  provider: bicep
+  path: infra
+  module: main

@@ -48,6 +48,12 @@ resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
         external: true
         targetPort: 80
         allowInsecure: false
+        corsPolicy: {
+          allowedOrigins: ['*']
+          allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+          allowedHeaders: ['*']
+          allowCredentials: false
+        }
         traffic: [
           {
             latestRevision: true
@@ -66,7 +72,7 @@ resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
       containers: [
         {
           name: 'frontend'
-          image: '${acrName}.azurecr.io/frontend:latest'
+          image: 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
           resources: {
             cpu: json('0.25')
             memory: '0.5Gi'
@@ -135,6 +141,12 @@ resource orderServiceApp 'Microsoft.App/containerApps@2023-05-01' = {
         external: true
         targetPort: 3001
         allowInsecure: false
+        corsPolicy: {
+          allowedOrigins: ['*']
+          allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+          allowedHeaders: ['*']
+          allowCredentials: false
+        }
         traffic: [
           {
             latestRevision: true
@@ -166,7 +178,7 @@ resource orderServiceApp 'Microsoft.App/containerApps@2023-05-01' = {
       containers: [
         {
           name: 'order-service'
-          image: '${acrName}.azurecr.io/order-service:latest'
+          image: 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
           resources: {
             cpu: json('0.5')
             memory: '1Gi'
@@ -258,6 +270,12 @@ resource inventoryServiceApp 'Microsoft.App/containerApps@2023-05-01' = {
       ingress: {
         external: false
         targetPort: 8000
+        corsPolicy: {
+          allowedOrigins: ['*']
+          allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+          allowedHeaders: ['*']
+          allowCredentials: false
+        }
         traffic: [
           {
             latestRevision: true
@@ -289,7 +307,7 @@ resource inventoryServiceApp 'Microsoft.App/containerApps@2023-05-01' = {
       containers: [
         {
           name: 'inventory-service'
-          image: '${acrName}.azurecr.io/inventory-service:latest'
+          image: 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
           resources: {
             cpu: json('0.5')
             memory: '1Gi'
@@ -381,6 +399,12 @@ resource notificationServiceApp 'Microsoft.App/containerApps@2023-05-01' = {
       ingress: {
         external: false
         targetPort: 8080
+        corsPolicy: {
+          allowedOrigins: ['*']
+          allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+          allowedHeaders: ['*']
+          allowCredentials: false
+        }
         traffic: [
           {
             latestRevision: true
@@ -405,7 +429,7 @@ resource notificationServiceApp 'Microsoft.App/containerApps@2023-05-01' = {
       containers: [
         {
           name: 'notification-service'
-          image: '${acrName}.azurecr.io/notification-service:latest'
+          image: 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
           resources: {
             cpu: json('0.25')
             memory: '0.5Gi'

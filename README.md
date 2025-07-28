@@ -21,6 +21,8 @@ This demo implements a modern microservices architecture with the following comp
 
 ## 🚀 Quick Start
 
+> **👆 Want to deploy immediately?** See [QUICKSTART.md](QUICKSTART.md) for a condensed deployment guide.
+
 ### Prerequisites
 - Azure CLI (`az`) installed and authenticated
 - Docker and Docker Compose
@@ -64,12 +66,72 @@ This demo implements a modern microservices architecture with the following comp
 
 ### Azure Deployment
 
+#### Option 1: Azure Developer CLI (azd) - Recommended ⭐
+
+The easiest way to deploy this application to Azure is using the Azure Developer CLI (azd).
+
+**Prerequisites:**
+- [Azure Developer CLI (azd)](https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/install-azd) installed
+- Azure CLI authenticated (`az login`)
+- Docker installed
+
+**Quick Deployment:**
+
+1. **Clone and navigate to the repository**
+   ```bash
+   git clone https://github.com/chmald/az-container-app-demo.git
+   cd az-container-app-demo
+   ```
+
+2. **Initialize and deploy with azd**
+   ```bash
+   # Initialize the azd environment (first time only)
+   azd init
+
+   # Login to Azure (if not already logged in)
+   azd auth login
+
+   # Provision infrastructure and deploy application
+   azd up
+   ```
+
+3. **Access your application**
+   After deployment completes, azd will display the URLs for your services:
+   - Frontend: `https://your-frontend-url.azurecontainerapps.io`
+   - Order Service API: `https://your-order-service-url.azurecontainerapps.io`
+   - Inventory Service API: `https://your-inventory-service-url.azurecontainerapps.io`
+   - Notification Service API: `https://your-notification-service-url.azurecontainerapps.io`
+
+**azd Commands:**
+```bash
+azd up          # Deploy everything (infrastructure + app)
+azd provision   # Deploy only infrastructure
+azd deploy      # Deploy only application code
+azd down        # Delete all Azure resources
+azd logs        # View application logs
+azd monitor     # Open Azure portal monitoring
+azd env list    # List environments
+azd env select  # Switch between environments
+```
+
+**Environment Configuration:**
+- Copy `.env.template` to `.env` and customize if needed
+- Modify `infra/main.parameters.json` for infrastructure parameters
+- Update `azure.yaml` for advanced deployment configuration
+
+#### Option 2: Manual Azure CLI Deployment
+
+1. **Deploy infrastructure**
+   ```bash
+   cd infrastructure/bicep
+#### Option 2: Manual Azure CLI Deployment
+
 1. **Deploy infrastructure**
    ```bash
    cd infrastructure/bicep
    
    # Create resource group if it doesn't exist
-   az group create --name az-container-apps-demo --location "East US 2"
+   az group create --name az-container-apps-demo --location "West US 3"
    
    # Deploy the infrastructure
    az deployment group create \
@@ -87,7 +149,7 @@ This demo implements a modern microservices architecture with the following comp
    az acr login --name $ACR_NAME
    
    # Build and push images
-   ./scripts/build-and-push.sh
+   ./scripts/build-and-push.sh $ACR_NAME
    ```
 
 3. **Deploy applications** (if using manual deployment)
@@ -98,6 +160,40 @@ This demo implements a modern microservices architecture with the following comp
    az containerapp update --name ecommerce-dev-inventory-service --resource-group az-container-apps-demo --image $ACR_NAME.azurecr.io/inventory-service:latest
    az containerapp update --name ecommerce-dev-notification-service --resource-group az-container-apps-demo --image $ACR_NAME.azurecr.io/notification-service:latest
    ```
+
+## 🚀 Benefits of Azure Developer CLI (azd)
+
+- **Simplified Deployment**: Single command deployment (`azd up`)
+- **Environment Management**: Easy switching between dev/staging/prod environments
+- **Integrated CI/CD**: Built-in GitHub Actions integration
+- **Infrastructure as Code**: Automatic Bicep template management
+- **Container Build & Push**: Automatic Docker image building and registry pushing
+- **Monitoring Integration**: Direct links to Azure Portal monitoring
+- **Rollback Support**: Easy rollback with `azd down` and `azd up`
+
+## 🔧 Customizing Your Deployment
+
+**Infrastructure Customization:**
+- Edit `infra/resources.bicep` to modify Azure resources
+- Update `infra/main.parameters.json` for different environments
+- Modify SKUs, scaling settings, and security configurations
+
+**Application Configuration:**
+- Update environment variables in the Bicep templates
+- Modify container resource allocations
+- Configure custom domains and SSL certificates
+
+**Development Workflow:**
+```bash
+# Make code changes
+# ...
+
+# Deploy just the application updates
+azd deploy
+
+# Or deploy specific service
+azd deploy --service frontend
+```
 
 ## 📁 Project Structure
 
@@ -223,7 +319,64 @@ For issues and questions:
 
 ### Common Deployment Issues
 
+**Azure Developer CLI (azd) Issues:**
+
+**Error: "azd command not found"**
+```bash
+# Install Azure Developer CLI
+# Windows (winget)
+winget install microsoft.azd
+
+# macOS (Homebrew)
+brew tap azure/azd && brew install azd
+
+# Linux
+curl -fsSL https://aka.ms/install-azd.sh | bash
+```
+
+**Error: "AZURE_PRINCIPAL_ID not set"**
+```bash
+# Get your user principal ID
+az ad signed-in-user show --query id -o tsv
+
+# Set it in your environment
+azd env set AZURE_PRINCIPAL_ID $(az ad signed-in-user show --query id -o tsv)
+```
+
+**Error: "Container image not found"**
+```bash
+# Ensure Docker is running and images are built
+azd deploy --debug  # Shows detailed deployment logs
+```
+
+**Continuous Deployment with GitHub Actions:**
+
+The repository includes a GitHub Actions workflow for automatic deployment:
+
+1. **Set up Azure service principal for GitHub Actions:**
+   ```bash
+   # Create service principal with contributor access
+   az ad sp create-for-rbac --name "github-actions-azd" \
+     --role contributor \
+     --scopes /subscriptions/{subscription-id} \
+     --sdk-auth
+   ```
+
+2. **Configure GitHub repository variables:**
+   - `AZURE_CLIENT_ID`: Service principal client ID
+   - `AZURE_TENANT_ID`: Azure tenant ID  
+   - `AZURE_SUBSCRIPTION_ID`: Azure subscription ID
+   - `AZURE_ENV_NAME`: Environment name (e.g., "dev", "staging", "prod")
+   - `AZURE_LOCATION`: Azure region (e.g., "westus3")
+
+3. **Configure GitHub repository secrets (if not using federated credentials):**
+   - `AZURE_CLIENT_SECRET`: Service principal client secret
+
+The workflow will automatically deploy on push to main branch.
+
 **Location Restrictions**: If you encounter location restrictions, try these regions:
+- West US 3
+- West US 2
 - East US 2
 - Central US
 - West Europe

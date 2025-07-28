@@ -3,19 +3,16 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "location": {
-      "value": "West US 3"
+      "value": "${AZURE_LOCATION}"
     },
-    "environment": {
-      "value": "dev"
+    "resourceToken": {
+      "value": "${AZURE_RESOURCE_TOKEN}"
     },
-    "appName": {
-      "value": "ecommerce"
-    },
-    "postgresAdminUsername": {
-      "value": "adminuser"
+    "principalId": {
+      "value": "${AZURE_PRINCIPAL_ID}"
     },
     "postgresAdminPassword": {
-      "value": "YourSecurePassword123!"
+      "value": "${POSTGRES_ADMIN_PASSWORD}"
     }
   }
 }

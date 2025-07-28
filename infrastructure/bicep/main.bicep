@@ -1,5 +1,5 @@
 @description('Location for all resources')
-param location string = 'East US 2'
+param location string = resourceGroup().location
 
 @description('Environment name (dev, staging, prod)')
 param environment string = 'dev'
@@ -8,25 +8,25 @@ param environment string = 'dev'
 param appName string = 'ecommerce'
 
 @description('Container Apps Environment name')
-param containerAppsEnvironmentName string = '${appName}-${environment}-env-${take(uniqueString(resourceGroup().id), 6)}'
+param containerAppsEnvironmentName string = '${appName}-${environment}-env-${take(uniqueString(subscription().id, resourceGroup().id, location, environment), 6)}'
 
 @description('Log Analytics Workspace name')
-param logAnalyticsWorkspaceName string = '${appName}-${environment}-logs-${take(uniqueString(resourceGroup().id), 6)}'
+param logAnalyticsWorkspaceName string = '${appName}-${environment}-logs-${take(uniqueString(subscription().id, resourceGroup().id, location, environment), 6)}'
 
 @description('Application Insights name')
-param appInsightsName string = '${appName}-${environment}-ai-${take(uniqueString(resourceGroup().id), 6)}'
+param appInsightsName string = '${appName}-${environment}-ai-${take(uniqueString(subscription().id, resourceGroup().id, location, environment), 6)}'
 
 @description('Azure Container Registry name')
-param acrName string = '${appName}${environment}${take(uniqueString(resourceGroup().id), 6)}'
+param acrName string = '${appName}${environment}${take(uniqueString(subscription().id, resourceGroup().id, location, environment), 6)}'
 
 @description('PostgreSQL server name')
-param postgresServerName string = '${appName}-${environment}-pg-${take(uniqueString(resourceGroup().id), 6)}'
+param postgresServerName string = '${appName}-${environment}-pg-${take(uniqueString(subscription().id, resourceGroup().id, location, environment), 6)}'
 
 @description('Redis cache name')
-param redisCacheName string = '${appName}-${environment}-redis-${take(uniqueString(resourceGroup().id), 6)}'
+param redisCacheName string = '${appName}-${environment}-redis-${take(uniqueString(subscription().id, resourceGroup().id, location, environment), 6)}'
 
 @description('Key Vault name')
-param keyVaultName string = '${appName}-${environment}-${take(uniqueString(resourceGroup().id), 6)}-kv'
+param keyVaultName string = '${appName}-${environment}-${take(uniqueString(subscription().id, resourceGroup().id, location, environment), 6)}-kv'
 
 @description('Virtual Network name')
 param vnetName string = '${appName}-${environment}-vnet'
@@ -57,14 +57,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-05-01' = {
         name: containerAppsSubnetName
         properties: {
           addressPrefix: '10.0.0.0/23'
-          delegations: [
-            {
-              name: 'containerAppsDelegation'
-              properties: {
-                serviceName: 'Microsoft.App/environments'
-              }
-            }
-          ]
+          // Removed conflicting delegations - Container Apps Environment will handle this
         }
       }
       {
@@ -254,7 +247,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     enableRbacAuthorization: true
     enableSoftDelete: true
     softDeleteRetentionInDays: 7
-    enablePurgeProtection: false
+    enablePurgeProtection: true  // Cannot be set to false - this is irreversible
   }
 }
 
@@ -328,3 +321,5 @@ output keyVaultUri string = keyVault.properties.vaultUri
 output appInsightsConnectionString string = appInsights.properties.ConnectionString
 output frontendUrl string = containerApps.outputs.frontendUrl
 output orderServiceUrl string = containerApps.outputs.orderServiceUrl
+output RESOURCE_GROUP_ID string = resourceGroup().id
+output AZURE_CONTAINER_REGISTRY_ENDPOINT string = acr.properties.loginServer
