@@ -1,0 +1,247 @@
+name: Build and Deploy to Azure Container Apps
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  AZURE_RESOURCE_GROUP: 'rg-ecommerce-dev'
+  AZURE_LOCATION: 'East US'
+  REGISTRY_NAME: 'ecommercedevacr'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: src/*/package*.json
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Setup Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.19'
+
+    # Frontend Tests
+    - name: Install Frontend Dependencies
+      run: |
+        cd src/frontend
+        npm ci
+
+    - name: Test Frontend
+      run: |
+        cd src/frontend
+        npm test -- --coverage --watchAll=false
+
+    - name: Build Frontend
+      run: |
+        cd src/frontend
+        npm run build
+
+    # Order Service Tests
+    - name: Install Order Service Dependencies
+      run: |
+        cd src/order-service
+        npm ci
+
+    - name: Test Order Service
+      run: |
+        cd src/order-service
+        npm test
+
+    - name: Build Order Service
+      run: |
+        cd src/order-service
+        npm run build
+
+    # Inventory Service Tests
+    - name: Install Inventory Service Dependencies
+      run: |
+        cd src/inventory-service
+        pip install -r requirements.txt
+
+    - name: Test Inventory Service
+      run: |
+        cd src/inventory-service
+        python -m pytest tests/ -v
+
+    # Notification Service Tests
+    - name: Test Notification Service
+      run: |
+        cd src/notification-service
+        go mod download
+        go test -v ./...
+
+    # Security Scanning
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  build-and-push-images:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Login to Azure Container Registry
+      run: |
+        az acr login --name ${{ env.REGISTRY_NAME }}
+
+    - name: Build and Push Frontend Image
+      run: |
+        cd src/frontend
+        docker build -t ${{ env.REGISTRY_NAME }}.azurecr.io/frontend:${{ github.sha }} .
+        docker push ${{ env.REGISTRY_NAME }}.azurecr.io/frontend:${{ github.sha }}
+        docker tag ${{ env.REGISTRY_NAME }}.azurecr.io/frontend:${{ github.sha }} ${{ env.REGISTRY_NAME }}.azurecr.io/frontend:latest
+        docker push ${{ env.REGISTRY_NAME }}.azurecr.io/frontend:latest
+
+    - name: Build and Push Order Service Image
+      run: |
+        cd src/order-service
+        docker build -t ${{ env.REGISTRY_NAME }}.azurecr.io/order-service:${{ github.sha }} .
+        docker push ${{ env.REGISTRY_NAME }}.azurecr.io/order-service:${{ github.sha }}
+        docker tag ${{ env.REGISTRY_NAME }}.azurecr.io/order-service:${{ github.sha }} ${{ env.REGISTRY_NAME }}.azurecr.io/order-service:latest
+        docker push ${{ env.REGISTRY_NAME }}.azurecr.io/order-service:latest
+
+    - name: Build and Push Inventory Service Image
+      run: |
+        cd src/inventory-service
+        docker build -t ${{ env.REGISTRY_NAME }}.azurecr.io/inventory-service:${{ github.sha }} .
+        docker push ${{ env.REGISTRY_NAME }}.azurecr.io/inventory-service:${{ github.sha }}
+        docker tag ${{ env.REGISTRY_NAME }}.azurecr.io/inventory-service:${{ github.sha }} ${{ env.REGISTRY_NAME }}.azurecr.io/inventory-service:latest
+        docker push ${{ env.REGISTRY_NAME }}.azurecr.io/inventory-service:latest
+
+    - name: Build and Push Notification Service Image
+      run: |
+        cd src/notification-service
+        docker build -t ${{ env.REGISTRY_NAME }}.azurecr.io/notification-service:${{ github.sha }} .
+        docker push ${{ env.REGISTRY_NAME }}.azurecr.io/notification-service:${{ github.sha }}
+        docker tag ${{ env.REGISTRY_NAME }}.azurecr.io/notification-service:${{ github.sha }} ${{ env.REGISTRY_NAME }}.azurecr.io/notification-service:latest
+        docker push ${{ env.REGISTRY_NAME }}.azurecr.io/notification-service:latest
+
+  deploy-infrastructure:
+    needs: build-and-push-images
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Create Resource Group
+      run: |
+        az group create --name ${{ env.AZURE_RESOURCE_GROUP }} --location "${{ env.AZURE_LOCATION }}"
+
+    - name: Deploy Bicep Template
+      run: |
+        az deployment group create \
+          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+          --template-file infrastructure/bicep/main.bicep \
+          --parameters infrastructure/bicep/parameters.json \
+          --parameters postgresAdminPassword="${{ secrets.POSTGRES_ADMIN_PASSWORD }}"
+
+  deploy-applications:
+    needs: deploy-infrastructure
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Update Container Apps
+      run: |
+        # Update Frontend
+        az containerapp update \
+          --name ecommerce-dev-frontend \
+          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+          --image ${{ env.REGISTRY_NAME }}.azurecr.io/frontend:${{ github.sha }}
+
+        # Update Order Service
+        az containerapp update \
+          --name ecommerce-dev-order-service \
+          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+          --image ${{ env.REGISTRY_NAME }}.azurecr.io/order-service:${{ github.sha }}
+
+        # Update Inventory Service
+        az containerapp update \
+          --name ecommerce-dev-inventory-service \
+          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+          --image ${{ env.REGISTRY_NAME }}.azurecr.io/inventory-service:${{ github.sha }}
+
+        # Update Notification Service
+        az containerapp update \
+          --name ecommerce-dev-notification-service \
+          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+          --image ${{ env.REGISTRY_NAME }}.azurecr.io/notification-service:${{ github.sha }}
+
+    - name: Get Application URLs
+      run: |
+        FRONTEND_URL=$(az containerapp show --name ecommerce-dev-frontend --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query "properties.configuration.ingress.fqdn" -o tsv)
+        echo "Frontend URL: https://$FRONTEND_URL"
+        
+        ORDER_SERVICE_URL=$(az containerapp show --name ecommerce-dev-order-service --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query "properties.configuration.ingress.fqdn" -o tsv)
+        echo "Order Service URL: https://$ORDER_SERVICE_URL"
+
+        echo "FRONTEND_URL=https://$FRONTEND_URL" >> $GITHUB_ENV
+        echo "ORDER_SERVICE_URL=https://$ORDER_SERVICE_URL" >> $GITHUB_ENV
+
+    - name: Run Health Checks
+      run: |
+        echo "Waiting for services to be ready..."
+        sleep 60
+        
+        # Check Frontend
+        curl -f ${{ env.FRONTEND_URL }}/health || echo "Frontend health check failed"
+        
+        # Check Order Service
+        curl -f ${{ env.ORDER_SERVICE_URL }}/health || echo "Order Service health check failed"
+
+    - name: Create GitHub Deployment
+      uses: chrnorm/deployment-action@v2
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        environment: production
+        environment_url: ${{ env.FRONTEND_URL }}

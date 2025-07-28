@@ -1,0 +1,188 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: ecommerce-postgres
+    environment:
+      POSTGRES_DB: ecommerce
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis for state management and pub/sub
+  redis:
+    image: redis:7-alpine
+    container_name: ecommerce-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend Service
+  frontend:
+    build:
+      context: ./src/frontend
+      dockerfile: Dockerfile
+    container_name: ecommerce-frontend
+    ports:
+      - "3000:80"
+    environment:
+      - REACT_APP_API_URL=http://localhost:3501/v1.0/invoke
+    depends_on:
+      - order-service
+      - inventory-service
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Order Service
+  order-service:
+    build:
+      context: ./src/order-service
+      dockerfile: Dockerfile
+    container_name: ecommerce-order-service
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - LOG_LEVEL=info
+    depends_on:
+      - postgres
+      - redis
+    healthcheck:
+      test: ["CMD", "node", "-e", "const http = require('http'); const options = { hostname: 'localhost', port: 3001, path: '/health', timeout: 2000 }; const req = http.get(options, (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }); req.on('error', () => process.exit(1)); req.on('timeout', () => { req.destroy(); process.exit(1) });"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Order Service Dapr Sidecar
+  order-service-dapr:
+    image: "daprio/daprd:edge"
+    container_name: ecommerce-order-service-dapr
+    command: ["./daprd",
+      "-app-id", "order-service",
+      "-app-port", "3001",
+      "-dapr-http-port", "3501",
+      "-dapr-grpc-port", "50001",
+      "-components-path", "/components",
+      "-config", "/configuration/config.yaml"]
+    volumes:
+      - "./infrastructure/dapr/components:/components"
+      - "./infrastructure/dapr/configuration:/configuration"
+    depends_on:
+      - order-service
+      - redis
+    network_mode: "service:order-service"
+
+  # Inventory Service
+  inventory-service:
+    build:
+      context: ./src/inventory-service
+      dockerfile: Dockerfile
+    container_name: ecommerce-inventory-service
+    ports:
+      - "8000:8000"
+    environment:
+      - LOG_LEVEL=INFO
+      - PORT=8000
+    depends_on:
+      - postgres
+      - redis
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health', timeout=2)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Inventory Service Dapr Sidecar
+  inventory-service-dapr:
+    image: "daprio/daprd:edge"
+    container_name: ecommerce-inventory-service-dapr
+    command: ["./daprd",
+      "-app-id", "inventory-service",
+      "-app-port", "8000",
+      "-dapr-http-port", "3502",
+      "-dapr-grpc-port", "50002",
+      "-components-path", "/components",
+      "-config", "/configuration/config.yaml"]
+    volumes:
+      - "./infrastructure/dapr/components:/components"
+      - "./infrastructure/dapr/configuration:/configuration"
+    depends_on:
+      - inventory-service
+      - redis
+    network_mode: "service:inventory-service"
+
+  # Notification Service
+  notification-service:
+    build:
+      context: ./src/notification-service
+      dockerfile: Dockerfile
+    container_name: ecommerce-notification-service
+    ports:
+      - "8080:8080"
+    environment:
+      - GIN_MODE=release
+      - LOG_LEVEL=info
+      - PORT=8080
+    depends_on:
+      - redis
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Notification Service Dapr Sidecar
+  notification-service-dapr:
+    image: "daprio/daprd:edge"
+    container_name: ecommerce-notification-service-dapr
+    command: ["./daprd",
+      "-app-id", "notification-service",
+      "-app-port", "8080",
+      "-dapr-http-port", "3503",
+      "-dapr-grpc-port", "50003",
+      "-components-path", "/components",
+      "-config", "/configuration/config.yaml"]
+    volumes:
+      - "./infrastructure/dapr/components:/components"
+      - "./infrastructure/dapr/configuration:/configuration"
+    depends_on:
+      - notification-service
+      - redis
+    network_mode: "service:notification-service"
+
+  # Dapr Dashboard (optional, for development)
+  dapr-dashboard:
+    image: "daprio/dashboard:latest"
+    container_name: ecommerce-dapr-dashboard
+    ports:
+      - "8081:8080"
+    depends_on:
+      - redis
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  default:
+    name: ecommerce-network

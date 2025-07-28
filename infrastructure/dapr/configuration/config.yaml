@@ -1,0 +1,24 @@
+apiVersion: dapr.io/v1alpha1
+kind: Configuration
+metadata:
+  name: daprConfig
+spec:
+  tracing:
+    samplingRate: "1"
+    otel:
+      endpointAddress: "http://jaeger:14268/api/traces"
+  logging:
+    level: "info"
+  metric:
+    enabled: true
+  api:
+    allowed:
+      - name: state
+        version: v1
+        protocol: http
+      - name: pubsub
+        version: v1
+        protocol: http
+      - name: invoke
+        version: v1
+        protocol: http
