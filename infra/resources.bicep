@@ -27,7 +27,7 @@ var logAnalyticsWorkspaceName = '${appName}-${environment}-logs-${resourceToken}
 var appInsightsName = '${appName}-${environment}-ai-${resourceToken}'
 
 @description('Azure Container Registry name')
-var acrName = '${appName}${environment}${take(resourceToken, 12)}'
+var acrName = '${appName}${environment}${take(resourceToken, 4)}'
 
 @description('PostgreSQL server name')
 var postgresServerName = '${appName}-${environment}-pg-${resourceToken}'
@@ -36,7 +36,7 @@ var postgresServerName = '${appName}-${environment}-pg-${resourceToken}'
 var redisCacheName = '${appName}-${environment}-redis-${resourceToken}'
 
 @description('Key Vault name')
-var keyVaultName = '${appName}${environment}${take(resourceToken, 12)}kv'
+var keyVaultName = '${appName}${environment}${take(resourceToken, 4)}kv'
 
 @description('Virtual Network name')
 var vnetName = '${appName}-${environment}-vnet'
@@ -495,7 +495,7 @@ resource orderServiceApp 'Microsoft.App/containerApps@2023-05-01' = {
     configuration: {
       activeRevisionsMode: 'Single'
       ingress: {
-        external: true
+        external: false
         targetPort: 3001
         allowInsecure: false
         corsPolicy: {
