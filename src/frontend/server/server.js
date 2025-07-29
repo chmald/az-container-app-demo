@@ -49,7 +49,7 @@ app.use((req, res, next) => {
 });
 
 // Serve static React build files
-app.use(express.static(path.join(__dirname, '../build'), {
+app.use(express.static(path.join(__dirname, 'build'), {
   maxAge: isProduction ? '1d' : '0', // Cache in production
   etag: true,
   lastModified: true,
@@ -105,6 +105,7 @@ const createServiceProxy = (serviceName, basePath) => {
 // API proxy routes using Dapr service invocation
 app.use('/api/proxy/orders', createServiceProxy('order-service', '/api/orders'));
 app.use('/api/proxy/inventory', createServiceProxy('inventory-service', '/api/inventory'));
+app.use('/api/proxy/notifications', createServiceProxy('notification-service', '/api'));
 
 // Additional health endpoints for monitoring
 app.get('/api/health/detailed', async (req, res) => {
@@ -143,6 +144,33 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Debug endpoint to check file structure (only in development)
+app.get('/debug/files', (req, res) => {
+  if (NODE_ENV === 'production') {
+    return res.status(404).json({ error: 'Debug endpoint not available in production' });
+  }
+  
+  const fs = require('fs');
+  const fileStructure = {
+    currentDir: __dirname,
+    buildPath: path.join(__dirname, 'build'),
+    buildExists: fs.existsSync(path.join(__dirname, 'build')),
+    buildIndexExists: fs.existsSync(path.join(__dirname, 'build/index.html')),
+    files: {},
+  };
+  
+  try {
+    fileStructure.files.root = fs.readdirSync(__dirname);
+    if (fileStructure.buildExists) {
+      fileStructure.files.build = fs.readdirSync(path.join(__dirname, 'build'));
+    }
+  } catch (error) {
+    fileStructure.error = error.message;
+  }
+  
+  res.json(fileStructure);
+});
+
 // Serve React app for all other routes (SPA routing)
 app.get('*', (req, res) => {
   // Don't serve index.html for API routes that don't exist
@@ -154,7 +182,7 @@ app.get('*', (req, res) => {
     });
   }
   
-  res.sendFile(path.join(__dirname, '../build/index.html'));
+  res.sendFile(path.join(__dirname, 'build/index.html'));
 });
 
 // Global error handling middleware
@@ -171,7 +199,7 @@ app.use((error, req, res, next) => {
 const server = app.listen(port, () => {
   console.log(`Frontend server running on port ${port}`);
   console.log(`Dapr sidecar expected on port ${DAPR_HTTP_PORT}`);
-  console.log(`Serving React build from: ${path.join(__dirname, '../build')}`);
+  console.log(`Serving React build from: ${path.join(__dirname, 'build')}`);
   console.log(`Health check available at: http://localhost:${port}/health`);
 });
 

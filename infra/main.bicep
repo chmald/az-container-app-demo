@@ -38,6 +38,7 @@ module resources 'resources.bicep' = {
     location: location
     tags: tags
     resourceToken: resourceToken
+    environmentName: environmentName
     principalId: principalId
     postgresAdminPassword: 'SecureP@ssw0rd${resourceToken}'
   }

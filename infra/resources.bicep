@@ -7,12 +7,15 @@ param tags object = {}
 @description('Resource token for unique naming')
 param resourceToken string
 
+@description('Environment name for azd')
+param environmentName string = 'dev'
+
 @description('Principal ID of the user or service principal to grant Key Vault access')
 param principalId string = ''
 
 // Service names with resource token
 var appName = 'ecomm'
-var environment = 'dev'
+var environment = environmentName
 
 @description('Container Apps Environment name')
 var containerAppsEnvironmentName = '${appName}-${environment}-env-${resourceToken}'
@@ -798,3 +801,5 @@ output AZURE_KEY_VAULT_NAME string = keyVault.name
 output AZURE_KEY_VAULT_ENDPOINT string = keyVault.properties.vaultUri
 output SERVICE_FRONTEND_ENDPOINT_URL string = 'https://${frontendApp.properties.configuration.ingress.fqdn}'
 output SERVICE_ORDER_SERVICE_ENDPOINT_URL string = 'https://${orderServiceApp.properties.configuration.ingress.fqdn}'
+output SERVICE_INVENTORY_SERVICE_ENDPOINT_URL string = 'inventory-service'  // Internal Dapr service name
+output SERVICE_NOTIFICATION_SERVICE_ENDPOINT_URL string = 'notification-service'  // Internal Dapr service name

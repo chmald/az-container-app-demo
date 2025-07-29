@@ -72,4 +72,20 @@ export const orderApi = {
   },
 };
 
+export const notificationApi = {
+  sendNotification: async (type: string, message: string, userId?: string): Promise<any> => {
+    const response = await api.post('/api/proxy/notifications/notify', {
+      type,
+      message,
+      userId,
+    });
+    return response.data;
+  },
+
+  healthCheck: async (): Promise<any> => {
+    const response = await api.get('/api/proxy/notifications/health');
+    return response.data;
+  },
+};
+
 export default api;
