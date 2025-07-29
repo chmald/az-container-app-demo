@@ -4,7 +4,7 @@
 
 **Latest Validation**: All azd files and prerequisites have been validated (July 29, 2025)
 - ✅ Azure CLI, azd, and Docker versions confirmed
-- ✅ Infrastructure files validated (no errors found)
+- ✅ Infrastructure files validated (no errors found)  
 - ✅ Container Apps configuration validated
 - ✅ Registry and identity configurations validated
 
@@ -22,13 +22,13 @@ See [azd validation summary](azd-validation-summary.md) for complete validation 
 3. Check Docker is running: `docker ps`
 4. Verify ports are not in use: `netstat -an | grep :3001`
 
-#### Frontend can't connect to backend services
+#### Frontend can't connect to backend service
 **Issue**: Frontend shows connection errors  
 **Solution**:
 1. Check if backend-service is running on port 3001
 2. Verify Dapr sidecar is running on port 3501
 3. Check browser console for CORS errors
-4. Ensure proxy configuration in package.json is correct
+4. Ensure proxy configuration in frontend server is correct
 
 #### Database connection errors
 **Issue**: Services can't connect to PostgreSQL or Redis  
@@ -85,25 +85,29 @@ See [azd validation summary](azd-validation-summary.md) for complete validation 
 ### Development Environment
 
 #### Node.js version conflicts
-**Issue**: Frontend or Order Service build failures  
-**Solution**:
-1. Use Node.js 18: `nvm use 18`
-2. Clear npm cache: `npm cache clean --force`
-3. Delete node_modules and reinstall: `rm -rf node_modules && npm install`
+**Issue**: Frontend or Backend Service build failures due to version mismatch  
+**Solution**: 
+1. Ensure Node.js 18+ is installed: `node --version`
+2. Use nvm for version management: `nvm use 18`  
+3. Clear npm cache: `npm cache clean --force`
+4. Delete node_modules and reinstall: `rm -rf node_modules && npm install`
+5. For Windows: `rmdir /s node_modules && npm install`
 
-#### Python dependency conflicts
-**Issue**: Inventory Service fails to start  
+#### TypeScript compilation errors
+**Issue**: TypeScript build failures in either service  
 **Solution**:
-1. Use Python 3.11: `python --version`
-2. Create virtual environment: `python -m venv venv`
-3. Install requirements: `pip install -r requirements.txt`
+1. Check TypeScript version: `npx tsc --version` (should be 4.9+ for frontend, 5.1+ for backend)
+2. Clean TypeScript cache: `npx tsc --build --clean`
+3. Reinstall TypeScript: `npm install -D typescript`
+4. Check tsconfig.json for correct configuration
 
-#### Go module issues
-**Issue**: Notification Service build errors  
+#### Docker dependency conflicts  
+**Issue**: Container builds fail due to dependency issues  
 **Solution**:
-1. Use Go 1.19+: `go version`
-2. Clean module cache: `go clean -modcache`
-3. Update dependencies: `go mod tidy`
+1. Use Docker BuildKit: `export DOCKER_BUILDKIT=1`
+2. Clear Docker cache: `docker system prune -af`
+3. Rebuild without cache: `docker build --no-cache -t frontend ./src/frontend`
+4. Check .dockerignore files for proper exclusions
 
 ## Debugging Commands
 

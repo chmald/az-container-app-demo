@@ -28,21 +28,28 @@ This demo implements a modern microservices architecture with the following comp
 
 ### Frontend Architecture
 - **React Build**: Static React app built with TypeScript and Material-UI
-- **Node.js Server**: Express server that serves React app and proxies API calls
+- **Node.js Server**: Express server that serves React app and proxies API calls via Dapr
 - **Dapr Integration**: Frontend server has Dapr sidecar for service communication
 - **Proxy Pattern**: `/api/proxy/orders` → Dapr → `backend-service/api/orders`
+- **Health Monitoring**: Comprehensive health checks and observability
+
+### Backend Service Architecture  
+- **Consolidated Design**: Single Node.js service containing all business logic
+- **Modules**: Order management, inventory tracking, notification system
+- **Dapr Integration**: State management and pub/sub messaging
+- **API Documentation**: OpenAPI/Swagger documentation available
+- **Database**: PostgreSQL integration with connection pooling
 
 ## 🚀 Quick Start
 
 > **👆 Want to deploy immediately?** See [QUICKSTART.md](QUICKSTART.md) for a condensed deployment guide.
 
 ### Prerequisites
-- Azure CLI (`az`) installed and authenticated
-- Docker and Docker Compose
-- Node.js 18+ and npm
-- Python 3.9+ and pip
-- Go 1.19+
-- Dapr CLI (for local development)
+- **Azure CLI (`az`)** - installed and authenticated
+- **Docker Desktop** - for containerization and local development
+- **Node.js 18+** and npm - for frontend and backend services
+- **Azure Developer CLI (azd)** - for streamlined Azure deployment
+- **Dapr CLI** - for local microservices development (optional for Azure deployment)
 
 ### Local Development Setup
 
@@ -125,10 +132,11 @@ The easiest way to deploy this application to Azure is using the Azure Developer
 **Infrastructure Validation Status:**
 - ✅ All azd deployment files validated and ready
 - ✅ Bicep templates validated (main.bicep, resources.bicep)
-- ✅ Container Apps configuration validated
+- ✅ Container Apps configuration validated (2 services: frontend + backend-service)
 - ✅ User-assigned managed identity and role assignments configured
 - ✅ Container registry connections validated
 - ✅ CORS policies configured for all services
+- ✅ Dapr components configured (Redis state store and pub/sub)
 - ✅ No errors found in infrastructure files
 
 **Quick Deployment:**
@@ -157,7 +165,7 @@ The easiest way to deploy this application to Azure is using the Azure Developer
    > - Create Azure infrastructure (Container Apps, Registry, Database, etc.)
    > - Build Docker images from your source code
    > - Push images to Azure Container Registry
-   > - Deploy your actual application containers (not starter images)
+   > - Deploy your actual application containers (React frontend + consolidated Node.js backend)
 
 3. **Validate your deployment**
    
@@ -353,40 +361,101 @@ azd deploy --service frontend
 ## 📁 Project Structure
 
 ```
+az-container-app-demo/
+├── azure.yaml                    # Azure Developer CLI configuration
+├── docker-compose.yml           # Local development with Dapr
+├── dev.bat                      # Windows development launcher
+│
 ├── src/
-│   ├── frontend/              # React TypeScript frontend
-│   └── backend-service/       # Node.js Express service (consolidated order, inventory, notification)
-├── infrastructure/
-│   ├── bicep/                # Azure Bicep templates
-│   └── dapr/                 # Dapr component definitions
-├── docker/                   # Dockerfiles and compose
-├── .github/workflows/        # CI/CD pipelines
-├── docs/                     # Documentation
-└── scripts/                  # Utility scripts
+│   ├── frontend/                # React TypeScript SPA with Express server
+│   │   ├── src/                 # React application source
+│   │   ├── server/              # Express.js proxy server with Dapr
+│   │   ├── Dockerfile           # Multi-stage container build
+│   │   └── package.json         # Dependencies and scripts
+│   │
+│   └── backend-service/         # Consolidated Node.js service
+│       ├── src/                 # TypeScript source code
+│       │   ├── controllers/     # API request handlers
+│       │   ├── services/        # Business logic (orders, inventory, notifications)
+│       │   ├── models/          # Data models and types
+│       │   ├── routes/          # Express route definitions
+│       │   └── dapr/            # Dapr integration
+│       ├── Dockerfile           # Container configuration
+│       └── package.json         # Dependencies and build scripts
+│
+├── infra/                       # Infrastructure as Code
+│   ├── main.bicep              # Main Azure resources template
+│   ├── resources.bicep         # Detailed resource definitions
+│   ├── main.parameters.json    # Environment parameters
+│   └── dapr/                   # Dapr component configurations
+│       ├── components/         # State store and pub/sub configs
+│       └── configuration/      # Dapr runtime settings
+│
+├── scripts/                    # Development and deployment scripts
+│   ├── start-local.bat/.sh    # Start all services locally
+│   ├── stop-local.bat/.sh     # Stop local development
+│   └── validate-deployment.*  # Post-deployment validation
+│
+└── docs/                       # Project documentation
+    ├── azd-validation-summary.md
+    ├── troubleshooting.md
+    ├── frontend-architecture.md
+    ├── frontend-development.md
+    └── frontend-communication-changes.md
 ```
 
 ## 🔧 Services Details
 
 ### Frontend Service (Port 3000)
-- **Technology**: React 18, TypeScript, Material-UI, Redux Toolkit
-- **Features**: Responsive design, error handling, Dapr SDK integration
-- **Endpoints**: Web application accessible at `http://localhost:3000`
+- **Technology Stack**: 
+  - React 18 with TypeScript
+  - Material-UI component library
+  - Redux Toolkit for state management
+  - Express.js server with Dapr integration
+- **Architecture**: 
+  - React SPA served by Express.js proxy server
+  - Server-side API proxying via Dapr service invocation
+  - `/api/proxy/*` endpoints route to backend services
+- **Features**: 
+  - Responsive e-commerce interface
+  - Real-time inventory and order management
+  - Comprehensive error handling and health monitoring
+- **Endpoints**: 
+  - Web application at root path (`/`)
+  - Health checks at `/health` and `/api/health/detailed`
+  - API proxy routes at `/api/proxy/*`
 
 ### Backend Service (Port 3001)
-- **Technology**: Node.js, Express, TypeScript, Dapr SDK
-- **Features**: JWT authentication, input validation, OpenAPI documentation, consolidated business logic
-- **Functionality**: 
-  - **Order Management**: Create, read, update orders
-  - **Inventory Management**: Track and manage product inventory
-  - **Notification System**: Send notifications for various events
-- **Endpoints**: 
-  - `GET /api/orders` - List orders
-  - `POST /api/orders` - Create order
+- **Technology Stack**: 
+  - Node.js with Express.js framework
+  - TypeScript for type safety
+  - Dapr SDK for microservices communication
+  - Winston for structured logging
+- **Architecture**: 
+  - Consolidated service containing all business logic
+  - Modular design with separate controllers and services
+  - OpenAPI/Swagger documentation integration
+- **Core Modules**:
+  - **Order Management**: Create, read, update, and track orders
+  - **Inventory Management**: Product catalog and stock tracking
+  - **Notification System**: Event-driven notifications and alerts
+- **Key Features**:
+  - RESTful API with comprehensive validation
+  - JWT authentication and authorization
+  - Dapr state management and pub/sub messaging
+  - PostgreSQL database integration with connection pooling
+  - Rate limiting and security middleware
+- **API Endpoints**: 
+  - `GET /api/orders` - List all orders
+  - `POST /api/orders` - Create new order
   - `GET /api/orders/:id` - Get order details
+  - `PUT /api/orders/:id` - Update order
   - `GET /api/inventory` - List inventory items
   - `POST /api/inventory` - Add inventory item
   - `PUT /api/inventory/:id` - Update inventory
-  - `POST /api/notify` - Send notification
+  - `POST /api/notifications` - Send notification
+  - `GET /health` - Service health check
+  - `GET /docs` - OpenAPI documentation
 
 ## 🐳 Container Configuration
 
@@ -426,21 +495,63 @@ The Bicep templates create:
 
 ## 🧪 Testing
 
+### Local Testing
 ```bash
-# Run unit tests
-npm test                    # Frontend
-npm test                    # Backend Service
+# Frontend unit tests
+cd src/frontend
+npm test
 
-# Run integration tests
-docker-compose -f docker-compose.test.yml up --abort-on-container-exit
+# Backend service unit tests  
+cd src/backend-service
+npm test
+
+# Frontend with coverage
+npm run test:ci
+
+# Backend with coverage and watch mode
+npm run test:watch
+```
+
+### Integration Testing
+```bash
+# Start full environment for testing
+docker-compose up -d
+
+# Run integration tests (when available)
+npm run test:integration
+
+# Validate local deployment
+scripts\validate-local.bat        # Windows
+./scripts/validate-deployment.sh  # Linux/macOS
+```
+
+### Load Testing
+```bash
+# Install dependencies for load testing
+npm install -g artillery
+
+# Run load tests against deployed services
+artillery run tests/load-test.yml
 ```
 
 ## 📚 Documentation
 
-- [Architecture Decisions](docs/architecture/)
-- [API Documentation](docs/api/)
-- [Deployment Guide](docs/deployment/)
-- [Troubleshooting](docs/troubleshooting.md)
+### Architecture & Design
+- [Frontend Architecture](docs/frontend-architecture.md) - Detailed Express + React + Dapr integration
+- [Frontend Development Guide](docs/frontend-development.md) - Local development setup and workflows
+- [Frontend Communication Changes](docs/frontend-communication-changes.md) - Dapr integration implementation
+
+### Deployment & Operations  
+- [Quick Start Guide](QUICKSTART.md) - Fast deployment with Azure Developer CLI
+- [Project Status](PROJECT_STATUS.md) - Current implementation status and roadmap
+- [Deployment Ready](DEPLOYMENT_READY.md) - Pre-deployment checklist and validation
+- [AZD Validation Summary](docs/azd-validation-summary.md) - Infrastructure validation results
+- [Troubleshooting Guide](docs/troubleshooting.md) - Common issues and solutions
+
+### Additional Resources
+- [Azure Container Apps Documentation](https://docs.microsoft.com/en-us/azure/container-apps/)
+- [Dapr Documentation](https://docs.dapr.io/)
+- [Azure Developer CLI Documentation](https://docs.microsoft.com/en-us/azure/developer/azure-developer-cli/)
 
 ## 🤝 Contributing
 
@@ -453,6 +564,14 @@ docker-compose -f docker-compose.test.yml up --abort-on-container-exit
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## ⚠️ Important Note
+
+This is a demonstration project showcasing Azure Container Apps and Dapr integration. For production use, review and adjust security configurations, resource sizing, and monitoring according to your specific requirements.
+
+---
 
 ## 🆘 Support
 
@@ -596,4 +715,16 @@ az provider register --namespace Microsoft.DBforPostgreSQL --wait
 
 ---
 
-**Note**: This is a demonstration project. For production use, review and adjust security configurations, resource sizing, and monitoring according to your specific requirements.
+## 📋 Project Status
+
+**Current Status**: ✅ **READY FOR DEPLOYMENT AND SHARING**  
+**Last Updated**: July 29, 2025
+
+- ✅ All infrastructure files validated and ready
+- ✅ Applications tested and functional  
+- ✅ Documentation synchronized and current
+- ✅ Azure Developer CLI deployment validated
+
+For detailed status information, see [PROJECT_STATUS.md](PROJECT_STATUS.md) and [DEPLOYMENT_READY.md](DEPLOYMENT_READY.md).
+
+---

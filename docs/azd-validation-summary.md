@@ -3,6 +3,29 @@
 **Validation Date**: July 29, 2025  
 **Status**: ✅ All validations passed - Ready for deployment
 
+## Architecture Overview
+
+This project implements a **simplified 2-service microservices architecture**:
+
+### ✅ Core Services
+1. **Frontend**: React SPA with Express.js server proxy (TypeScript)
+   - Serves React build and proxies API calls via Dapr
+   - Port: 3000, Dapr App ID: `frontend`
+
+2. **Backend Service**: Consolidated Node.js service (TypeScript)
+   - Contains all business logic: orders, inventory, notifications
+   - Port: 3001, Dapr App ID: `backend-service`
+
+### ✅ Infrastructure Components
+- Azure Container Apps Environment with VNET integration
+- 2 Container Apps (matching services above)
+- Azure Container Registry with ACR Pull permissions
+- User-assigned managed identity with proper role assignments
+- PostgreSQL Flexible Server with private networking
+- Azure Cache for Redis for Dapr state and pub/sub
+- Application Insights for monitoring
+- Azure Key Vault for secrets management
+
 ## Tool Validation Results
 
 ### ✅ Azure CLI (az)
@@ -42,12 +65,16 @@
 - **Location**: `/infra/resources.bicep`
 - **Status**: Valid Bicep template with complete resource definitions
 - **Architecture**: Simplified 2-service architecture matching azure.yaml
+- **Services**: Frontend (React + Express proxy) + Backend Service (consolidated Node.js API)
 - **Key Resources**:
   - Azure Container Apps Environment with VNET integration
   - 2 Container Apps (frontend, backend-service)
   - Azure Container Registry with ACR Pull permissions
   - User-assigned managed identity
   - PostgreSQL Flexible Server with private networking
+  - Azure Cache for Redis for Dapr components
+  - Key Vault for secrets management
+  - Application Insights for monitoring
   - Azure Cache for Redis
   - Key Vault with RBAC authorization
   - Log Analytics and Application Insights

@@ -10,7 +10,10 @@ if "%AZURE_CONTAINER_REGISTRY_NAME%"=="" (
     exit /b 1
 )
 
-REM Call the existing build script
-call scripts\build-and-push.bat %AZURE_CONTAINER_REGISTRY_NAME% latest
+echo Container registry: %AZURE_CONTAINER_REGISTRY_NAME%
 
-echo Container images built and pushed successfully!
+REM Azure Developer CLI will handle the actual image building and pushing
+REM This script is run as part of the azd deployment process
+echo Azure Developer CLI will build and push container images automatically during deployment
+
+echo Pre-deployment tasks completed successfully!

@@ -60,7 +60,7 @@ npm start &
 cd ../..
 
 echo ""
-echo "🚀 All services started successfully!"
+echo "All services started successfully!"
 echo ""
 echo "Services running on:"
 echo "  Frontend:         http://localhost:3000"

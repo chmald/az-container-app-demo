@@ -20,4 +20,4 @@ docker-compose down
 echo "Cleaning up remaining processes..."
 pkill -f "npm start" || true
 
-echo "✅ All services stopped successfully!"
+echo "All services stopped successfully!"

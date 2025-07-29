@@ -10,7 +10,7 @@ All required tools are installed and validated:
 Azure deployment files have been validated and are ready:
 - ✅ `azure.yaml` - AZD configuration validated (2 services: frontend, backend-service)
 - ✅ `infra/main.bicep` - Infrastructure template validated  
-- ✅ `infra/resources.bicep` - Resources template validated (simplified 2-app architecture)
+- ✅ `infra/resources.bicep` - Resources template validated (2-service architecture)
 - ✅ `infra/main.parameters.json` - Parameters validated
 - ✅ Container Apps configuration validated (2 container apps matching azure.yaml)
 - ✅ Registry and identity configurations validated
@@ -39,7 +39,9 @@ This single command will:
 - ✅ Deploy your application with validated Container Apps configuration
 - ✅ Configure networking, security, and monitoring (all pre-validated)
 
-**What to expect**: The deployment process has been validated and all infrastructure files are error-free. The deployment should complete successfully with all 4 container apps running your actual application (not placeholder images).
+**What to expect**: The deployment process has been validated and all infrastructure files are error-free. The deployment should complete successfully with 2 container apps running your actual application:
+- **Frontend**: React SPA served by Express.js proxy server with Dapr integration  
+- **Backend Service**: Consolidated Node.js API with order, inventory, and notification logic
 
 ### 3. Access Your Application
 After deployment, azd will show the URLs for your services:
