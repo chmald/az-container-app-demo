@@ -56,18 +56,58 @@ This demo implements a modern microservices architecture with the following comp
    cd az-container-app-demo
    ```
 
-2. **Start local development environment**
-   ```bash
-   docker-compose up -d
+2. **Prerequisites for local development**
+   - Docker and Docker Compose
+   - Node.js 18+ and npm
+   - Python 3.9+ and pip
+   - Go 1.19+
+   - [Dapr CLI](https://docs.dapr.io/getting-started/install-dapr-cli/) installed and initialized (`dapr init`)
+
+3. **Quick Start - All Services (Recommended)**
+
+   **Windows:**
+   ```cmd
+   # Interactive launcher with menu
+   dev.bat
+
+   # Or directly start all services
+   scripts\start-local.bat
    ```
 
-3. **Initialize Dapr (if not using Docker)**
+   **Linux/macOS:**
    ```bash
-   dapr init
+   ./scripts/start-local.sh
    ```
 
-4. **Start services individually**
+   This will:
+   - Start PostgreSQL and Redis with Docker Compose
+   - Install dependencies for all services
+   - Start all services with their Dapr sidecars
+   - Open each service in a separate terminal window
+
+4. **Validate Setup**
+   ```cmd
+   # Windows
+   scripts\validate-local.bat
+
+   # Linux/macOS
+   ./scripts/validate-deployment.sh
+   ```
+
+5. **Stop All Services**
+   ```cmd
+   # Windows
+   scripts\stop-local.bat
+
+   # Linux/macOS
+   ./scripts/stop-local.sh
+   ```
+
+6. **Manual Service Startup (Alternative)**
    ```bash
+   # Start infrastructure first
+   docker-compose up -d postgres redis
+
    # Frontend (React)
    cd src/frontend && npm install && npm start
 
