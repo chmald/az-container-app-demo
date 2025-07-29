@@ -150,13 +150,14 @@ export const orderApi = {
 };
 ```
 
-### Adding New Backend Services
-1. Add proxy route in `server/server.js`:
+### Adding New API Endpoints
+1. Add endpoint in backend service:
 ```javascript
-app.use('/api/proxy/notifications', createServiceProxy('notification-service', '/api/notifications'));
+// In backend-service, add new route
+app.get('/api/notifications', (req, res) => { ... });
 ```
 
-2. Use in React:
+2. Use existing proxy route in React:
 ```typescript
 const notificationApi = {
   getNotifications: () => api.get('/api/proxy/notifications'),
@@ -185,8 +186,8 @@ const notificationApi = {
 The Express server provides detailed logging:
 ```
 [2024-01-15T10:30:00.000Z] GET /api/proxy/inventory - 127.0.0.1
-[abc123] 📤 Proxying GET / to inventory-service
-[abc123] ✅ inventory-service responded with 200 in 45ms
+[abc123] 📤 Proxying GET / to backend-service
+[abc123] ✅ backend-service responded with 200 in 45ms
 ```
 
 ### Chrome DevTools

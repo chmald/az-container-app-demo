@@ -15,7 +15,7 @@
 #### Frontend can't connect to backend services
 **Issue**: Frontend shows connection errors  
 **Solution**:
-1. Check if order-service is running on port 3001
+1. Check if backend-service is running on port 3001
 2. Verify Dapr sidecar is running on port 3501
 3. Check browser console for CORS errors
 4. Ensure proxy configuration in package.json is correct
@@ -111,7 +111,7 @@ curl https://<app-name>/health
 ### View Dapr logs
 ```bash
 # Local
-dapr logs --app-id order-service
+dapr logs --app-id backend-service
 
 # Azure - use Azure Portal or CLI
 az containerapp logs show --name <app-name> --resource-group <rg-name>

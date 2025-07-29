@@ -27,11 +27,11 @@ Updated the frontend React application to use Dapr service invocation through a 
 
 **Key Features:**
 ```javascript
-// Proxy to order service via Dapr
+// Proxy to backend service via Dapr
 app.use('/api/proxy/orders', async (req, res) => {
   const response = await axios({
     method: req.method,
-    url: `${DAPR_BASE_URL}/order-service/method/api/orders${req.path}`,
+    url: `${DAPR_BASE_URL}/backend-service/method/api/orders${req.path}`,
     data: req.body
   });
   res.json(response.data);
@@ -49,7 +49,7 @@ app.use('/api/proxy/orders', async (req, res) => {
 - Frontend now has Dapr enabled (`dapr.enabled: true`)
 - App ID: `frontend`
 - App Port: `3000` (Node.js server)
-- Inventory service back to `external: false` (Dapr-only access)
+- Backend service accessible via Dapr (internal communication)
 
 ### 4. Docker Configuration
 **Updated Dockerfile:**
@@ -69,16 +69,14 @@ app.use('/api/proxy/orders', async (req, res) => {
 graph TD
     A[Browser] --> B[Frontend Server :3000]
     B --> C[Frontend Dapr Sidecar :3500]
-    C --> D[Order Service Dapr :3501]
-    C --> E[Inventory Service Dapr :3502]
-    D --> F[Order Service :3001]
-    E --> G[Inventory Service :8000]
+    C --> D[Backend Service Dapr :3501]
+    D --> E[Backend Service :3001]
 ```
 
 ### Request Example
 1. Browser: `GET /api/proxy/orders`
-2. Frontend Server: `GET http://localhost:3500/v1.0/invoke/order-service/method/api/orders`
-3. Frontend Dapr → Order Service Dapr → Order Service
+2. Frontend Server: `GET http://localhost:3500/v1.0/invoke/backend-service/method/api/orders`
+3. Frontend Dapr → Backend Service Dapr → Backend Service
 4. Response flows back through the same chain
 
 ## Development Setup
@@ -142,7 +140,7 @@ src/frontend/
 ### Azure Container Apps
 - Frontend container app has Dapr enabled
 - All services communicate via Dapr service invocation
-- Inventory service can be internal-only (no external ingress needed)
+- Backend service handles all business logic internally
 
 ### Local Development
 - Use docker-compose for full environment

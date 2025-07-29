@@ -8,9 +8,7 @@ This demo implements a modern microservices architecture with the following comp
 
 ### Core Services
 - **Frontend Service**: React with TypeScript and Material-UI
-- **Order Service**: Node.js/Express REST API with Dapr integration
-- **Inventory Service**: Python FastAPI with async operations
-- **Notification Service**: Go microservice with pub/sub capabilities
+- **Backend Service**: Consolidated Node.js/Express service with order, inventory, and notification logic using Dapr integration
 
 ### Infrastructure
 - **Azure Container Apps Environment** with VNET integration
@@ -22,11 +20,9 @@ This demo implements a modern microservices architecture with the following comp
 ### Communication Patterns
 - **Frontend ↔ Backend Services**: Dapr service invocation through frontend server proxy
   - React app served by Node.js/Express server with Dapr sidecar
-  - Frontend server proxies API calls to backend services via Dapr
+  - Frontend server proxies API calls to backend service via Dapr
   - Uses `/api/proxy/*` endpoints that translate to Dapr service invocation
-- **Backend Service ↔ Backend Service**: Dapr service-to-service invocation
-  - Order Service ↔ Inventory Service via Dapr
-  - Notification Service ↔ Other services via Dapr pub/sub
+- **Backend Service Internal**: All order, inventory, and notification logic consolidated within single service
 - **State Management**: Dapr state store with Redis backend
 - **Event Communication**: Dapr pub/sub with Redis broker
 
@@ -34,7 +30,7 @@ This demo implements a modern microservices architecture with the following comp
 - **React Build**: Static React app built with TypeScript and Material-UI
 - **Node.js Server**: Express server that serves React app and proxies API calls
 - **Dapr Integration**: Frontend server has Dapr sidecar for service communication
-- **Proxy Pattern**: `/api/proxy/orders` → Dapr → `order-service/api/orders`
+- **Proxy Pattern**: `/api/proxy/orders` → Dapr → `backend-service/api/orders`
 
 ## 🚀 Quick Start
 
@@ -111,14 +107,8 @@ This demo implements a modern microservices architecture with the following comp
    # Frontend (React)
    cd src/frontend && npm install && npm start
 
-   # Order Service (Node.js)
-   cd src/order-service && npm install && dapr run --app-id order-service --app-port 3001 --dapr-http-port 3501 npm start
-
-   # Inventory Service (Python)
-   cd src/inventory-service && pip install -r requirements.txt && dapr run --app-id inventory-service --app-port 8000 --dapr-http-port 3502 uvicorn main:app --host 0.0.0.0 --port 8000
-
-   # Notification Service (Go)
-   cd src/notification-service && go mod tidy && dapr run --app-id notification-service --app-port 8080 --dapr-http-port 3503 go run main.go
+   # Backend Service (Node.js with consolidated logic)
+   cd src/backend-service && npm install && dapr run --app-id backend-service --app-port 3001 --dapr-http-port 3501 npm start
    ```
 
 ### Azure Deployment
@@ -173,16 +163,13 @@ The easiest way to deploy this application to Azure is using the Azure Developer
    curl https://your-frontend-url.azurecontainerapps.io
    
    # Test the APIs (replace with your actual URLs)
-   curl https://your-order-service-url.azurecontainerapps.io/health
-   curl https://your-inventory-service-url.azurecontainerapps.io/health
+   curl https://your-backend-service-url.azurecontainerapps.io/health
    ```
 
 4. **Access your application**
    After deployment completes, azd will display the URLs for your services:
    - Frontend: `https://your-frontend-url.azurecontainerapps.io`
-   - Order Service API: `https://your-order-service-url.azurecontainerapps.io`
-   - Inventory Service API: `https://your-inventory-service-url.azurecontainerapps.io`
-   - Notification Service API: `https://your-notification-service-url.azurecontainerapps.io`
+   - Backend Service API: `https://your-backend-service-url.azurecontainerapps.io`
 
 **azd Commands:**
 ```bash
@@ -288,8 +275,8 @@ azd logs --follow          # Shows live application logs
 curl -I https://your-frontend-url.azurecontainerapps.io
 
 # Test the APIs (should return JSON, not HTML)
-curl https://your-order-service-url.azurecontainerapps.io/health
-curl https://your-inventory-service-url.azurecontainerapps.io/api/inventory
+curl https://your-backend-service-url.azurecontainerapps.io/health
+curl https://your-backend-service-url.azurecontainerapps.io/api/orders
 ```
 
 ### 3. Check Azure Portal
@@ -357,9 +344,7 @@ azd deploy --service frontend
 ```
 ├── src/
 │   ├── frontend/              # React TypeScript frontend
-│   ├── order-service/         # Node.js Express API
-│   ├── inventory-service/     # Python FastAPI service
-│   └── notification-service/  # Go microservice
+│   └── backend-service/       # Node.js Express service (consolidated order, inventory, notification)
 ├── infrastructure/
 │   ├── bicep/                # Azure Bicep templates
 │   └── dapr/                 # Dapr component definitions
@@ -376,28 +361,21 @@ azd deploy --service frontend
 - **Features**: Responsive design, error handling, Dapr SDK integration
 - **Endpoints**: Web application accessible at `http://localhost:3000`
 
-### Order Service (Port 3001)
+### Backend Service (Port 3001)
 - **Technology**: Node.js, Express, TypeScript, Dapr SDK
-- **Features**: JWT authentication, input validation, OpenAPI documentation
+- **Features**: JWT authentication, input validation, OpenAPI documentation, consolidated business logic
+- **Functionality**: 
+  - **Order Management**: Create, read, update orders
+  - **Inventory Management**: Track and manage product inventory
+  - **Notification System**: Send notifications for various events
 - **Endpoints**: 
   - `GET /api/orders` - List orders
   - `POST /api/orders` - Create order
   - `GET /api/orders/:id` - Get order details
-
-### Inventory Service (Port 8000)
-- **Technology**: Python, FastAPI, Pydantic, async/await
-- **Features**: Database integration, Dapr bindings, comprehensive validation
-- **Endpoints**:
   - `GET /api/inventory` - List inventory items
   - `POST /api/inventory` - Add inventory item
   - `PUT /api/inventory/:id` - Update inventory
-
-### Notification Service (Port 8080)
-- **Technology**: Go, Dapr pub/sub, structured logging
-- **Features**: Email/SMS notifications, graceful shutdown, event processing
-- **Endpoints**:
   - `POST /api/notify` - Send notification
-  - Health check endpoints
 
 ## 🐳 Container Configuration
 
@@ -440,9 +418,7 @@ The Bicep templates create:
 ```bash
 # Run unit tests
 npm test                    # Frontend
-npm test                    # Order Service
-pytest                     # Inventory Service
-go test ./...              # Notification Service
+npm test                    # Backend Service
 
 # Run integration tests
 docker-compose -f docker-compose.test.yml up --abort-on-container-exit
@@ -548,9 +524,7 @@ If container builds are failing:
 3. Test builds locally:
    ```bash
    cd src/frontend && docker build -t frontend-test .
-   cd ../order-service && docker build -t order-test .
-   cd ../inventory-service && docker build -t inventory-test .
-   cd ../notification-service && docker build -t notification-test .
+   cd ../backend-service && docker build -t backend-test .
    ```
 
 **Network/Connectivity Issues:**
