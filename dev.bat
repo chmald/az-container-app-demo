@@ -55,7 +55,7 @@ goto menu
 
 :view_logs
 echo.
-echo Available services: frontend, order-service, inventory-service, notification-service
+echo Available services: frontend, backend-service
 echo.
 set /p service=Enter service name to view logs: 
 if not "%service%"=="" (
@@ -86,24 +86,19 @@ echo ======================================================================
 echo Service URLs:
 echo ======================================================================
 echo.
-echo Frontend:          http://localhost:3000
-echo Order Service:     http://localhost:3001
-echo Inventory Service: http://localhost:8000
-echo Notification Svc:  http://localhost:8080
+echo Frontend:         http://localhost:3000
+echo Backend Service:  http://localhost:3001
 echo.
 echo Dapr Sidecars:
-echo Frontend Dapr:     http://localhost:3500
-echo Order Dapr:        http://localhost:3501
-echo Inventory Dapr:    http://localhost:3502
-echo Notification Dapr: http://localhost:3503
+echo Frontend Dapr:    http://localhost:3500
+echo Backend Dapr:     http://localhost:3501
 echo.
 echo Infrastructure:
-echo PostgreSQL:        localhost:5432
-echo Redis:             localhost:6379
+echo PostgreSQL:       localhost:5432
+echo Redis:            localhost:6379
 echo.
 echo API Documentation:
-echo Order Service:     http://localhost:3001/api-docs
-echo Inventory Service: http://localhost:8000/api/docs
+echo Backend Service:  http://localhost:3001/api-docs
 echo ======================================================================
 echo.
 pause
