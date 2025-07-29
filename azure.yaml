@@ -21,8 +21,8 @@ services:
       postdeploy:
         shell: pwsh
         run: Write-Host "Frontend deployed successfully"
-  order-service:
-    project: ./src/order-service
+  backend-service:
+    project: ./src/backend-service
     language: ts
     host: containerapp
     docker:
@@ -37,41 +37,7 @@ services:
           }
       postdeploy:
         shell: pwsh
-        run: Write-Host "Order service deployed successfully"
-  inventory-service:
-    project: ./src/inventory-service
-    language: python
-    host: containerapp
-    docker:
-      path: ./Dockerfile
-      context: ./
-    hooks:
-      prebuild:
-        shell: pwsh
-        run: |
-          if ($env:AZURE_ENV_NAME) {
-            azd env get-values > .env
-          }
-      postdeploy:
-        shell: pwsh
-        run: Write-Host "Inventory service deployed successfully"
-  notification-service:
-    project: ./src/notification-service
-    language: js
-    host: containerapp
-    docker:
-      path: ./Dockerfile
-      context: ./
-    hooks:
-      prebuild:
-        shell: pwsh
-        run: |
-          if ($env:AZURE_ENV_NAME) {
-            azd env get-values > .env
-          }
-      postdeploy:
-        shell: pwsh
-        run: Write-Host "Notification service deployed successfully"
+        run: Write-Host "Backend service deployed successfully"
 
 hooks:
   preprovision:
