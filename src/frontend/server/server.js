@@ -103,9 +103,9 @@ const createServiceProxy = (serviceName, basePath) => {
 };
 
 // API proxy routes using Dapr service invocation
-app.use('/api/proxy/orders', createServiceProxy('order-service', '/api/orders'));
-app.use('/api/proxy/inventory', createServiceProxy('inventory-service', '/api/inventory'));
-app.use('/api/proxy/notifications', createServiceProxy('notification-service', '/api'));
+app.use('/api/proxy/orders', createServiceProxy('backend-service', '/api/orders'));
+app.use('/api/proxy/inventory', createServiceProxy('backend-service', '/api/inventory'));
+app.use('/api/proxy/notifications', createServiceProxy('backend-service', '/api/notifications'));
 
 // Additional health endpoints for monitoring
 app.get('/api/health/detailed', async (req, res) => {
