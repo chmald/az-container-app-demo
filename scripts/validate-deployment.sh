@@ -96,7 +96,7 @@ if [ -n "$ACR_NAME" ]; then
             echo "Found repositories: $(echo "$REPOS" | tr -d '[]"' | sed 's/,/, /g')"
             
             # Check for expected repositories
-            EXPECTED_REPOS=("frontend" "order-service" "inventory-service" "notification-service")
+            EXPECTED_REPOS=("frontend" "backend-service")
             MISSING_REPOS=()
             
             for repo in "${EXPECTED_REPOS[@]}"; do

@@ -84,7 +84,7 @@ if ($acrName) {
         $repos = az acr repository list --name $acrName --output json | ConvertFrom-Json
         Write-Host "Found repositories: $($repos -join ', ')" -ForegroundColor Cyan
         
-        $expectedRepos = @("frontend", "order-service", "inventory-service", "notification-service")
+        $expectedRepos = @("frontend", "backend-service")
         $missingRepos = $expectedRepos | Where-Object { $_ -notin $repos }
         
         if ($missingRepos.Count -eq 0) {

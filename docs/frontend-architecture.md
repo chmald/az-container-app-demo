@@ -30,9 +30,10 @@ The frontend service combines a **React SPA** with an **Express server** that ac
               ┌─────────────────────────────────┐
               │        Backend Services         │
               │                                 │
-              │ • Order Service (Node.js)      │
-              │ • Inventory Service (Python)   │
-              │ • Notification Service (Go)    │
+              │ • Backend Service (Node.js)    │
+              │   - Order Management            │
+              │   - Inventory Management        │
+              │   - Notification System         │
               └─────────────────────────────────┘
 ```
 
@@ -47,7 +48,7 @@ const response = await api.get('/api/proxy/inventory');
 ### 2. Express Server Proxy
 ```javascript
 // Express server receives request and proxies via Dapr
-app.use('/api/proxy/inventory', createServiceProxy('inventory-service', '/api/inventory'));
+app.use('/api/proxy/inventory', createServiceProxy('backend-service', '/api/inventory'));
 ```
 
 ### 3. Dapr Service Invocation
@@ -56,9 +57,9 @@ GET /api/proxy/inventory/products
     ↓
 Express Server
     ↓
-Dapr Sidecar: http://localhost:3500/v1.0/invoke/inventory-service/method/api/inventory/products
+Dapr Sidecar: http://localhost:3500/v1.0/invoke/backend-service/method/api/inventory/products
     ↓
-Inventory Service: http://inventory-service:8000/api/inventory/products
+Backend Service: http://backend-service:3001/api/inventory/products
 ```
 
 ## Key Features
@@ -106,8 +107,8 @@ DAPR_HTTP_PORT=3500
 ## API Endpoints
 
 ### Proxy Endpoints
-- `GET|POST|PUT|DELETE /api/proxy/orders/*` → Order Service
-- `GET|POST|PUT|DELETE /api/proxy/inventory/*` → Inventory Service
+- `GET|POST|PUT|DELETE /api/proxy/orders/*` → Backend Service
+- `GET|POST|PUT|DELETE /api/proxy/inventory/*` → Backend Service
 
 ### Health & Monitoring
 - `GET /health` → Basic health check
@@ -194,7 +195,7 @@ cd server && npm start      # Serve via Express
 3. **API Proxy Errors**
    ```bash
    # Check backend service connectivity
-   curl http://localhost:3500/v1.0/invoke/inventory-service/method/api/inventory
+   curl http://localhost:3500/v1.0/invoke/backend-service/method/api/inventory
    ```
 
 ### Logging
@@ -202,8 +203,8 @@ cd server && npm start      # Serve via Express
 The server provides structured logging with request IDs:
 ```
 [2024-01-15T10:30:00.000Z] GET /api/proxy/inventory - 127.0.0.1
-[abc123] 📤 Proxying GET / to inventory-service
-[abc123] ✅ inventory-service responded with 200 in 45ms
+[abc123] 📤 Proxying GET / to backend-service
+[abc123] ✅ backend-service responded with 200 in 45ms
 ```
 
 ## Best Practices
