@@ -20,9 +20,10 @@ CMD ["npm", "run", "dev"]
 
 # Build stage
 FROM base AS build
+COPY package*.json ./
 RUN npm ci
 COPY . .
-RUN npm run build
+COPY dist ./dist
 
 # Production stage
 FROM node:18-alpine AS production

@@ -44,8 +44,7 @@ services:
       - DAPR_HTTP_PORT=3500
       - NODE_ENV=development
     depends_on:
-      - order-service
-      - inventory-service
+      - backend-service
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
       interval: 30s
@@ -73,12 +72,12 @@ services:
       - placement
     network_mode: "service:frontend"
 
-  # Order Service
-  order-service:
+  # Backend Service (consolidated order, inventory, notification)
+  backend-service:
     build:
-      context: ./src/order-service
+      context: ./src/backend-service
       dockerfile: Dockerfile
-    container_name: ecommerce-order-service
+    container_name: ecommerce-backend-service
     ports:
       - "3001:3001"
     environment:
@@ -94,12 +93,12 @@ services:
       timeout: 10s
       retries: 3
 
-  # Order Service Dapr Sidecar
-  order-service-dapr:
+  # Backend Service Dapr Sidecar
+  backend-service-dapr:
     image: "daprio/daprd:edge"
-    container_name: ecommerce-order-service-dapr
+    container_name: ecommerce-backend-service-dapr
     command: ["./daprd",
-      "-app-id", "order-service",
+      "-app-id", "backend-service",
       "-app-port", "3001",
       "-dapr-http-port", "3501",
       "-dapr-grpc-port", "50001",
@@ -109,87 +108,9 @@ services:
       - "./infra/dapr/components:/components"
       - "./infra/dapr/configuration:/configuration"
     depends_on:
-      - order-service
+      - backend-service
       - redis
-    network_mode: "service:order-service"
-
-  # Inventory Service
-  inventory-service:
-    build:
-      context: ./src/inventory-service
-      dockerfile: Dockerfile
-    container_name: ecommerce-inventory-service
-    ports:
-      - "8000:8000"
-    environment:
-      - LOG_LEVEL=INFO
-      - PORT=8000
-    depends_on:
-      - postgres
-      - redis
-    healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health', timeout=2)"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # Inventory Service Dapr Sidecar
-  inventory-service-dapr:
-    image: "daprio/daprd:edge"
-    container_name: ecommerce-inventory-service-dapr
-    command: ["./daprd",
-      "-app-id", "inventory-service",
-      "-app-port", "8000",
-      "-dapr-http-port", "3502",
-      "-dapr-grpc-port", "50002",
-      "-components-path", "/components",
-      "-config", "/configuration/config.yaml"]
-    volumes:
-      - "./infra/dapr/components:/components"
-      - "./infra/dapr/configuration:/configuration"
-    depends_on:
-      - inventory-service
-      - redis
-    network_mode: "service:inventory-service"
-
-  # Notification Service
-  notification-service:
-    build:
-      context: ./src/notification-service
-      dockerfile: Dockerfile
-    container_name: ecommerce-notification-service
-    ports:
-      - "8080:8080"
-    environment:
-      - GIN_MODE=release
-      - LOG_LEVEL=info
-      - PORT=8080
-    depends_on:
-      - redis
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # Notification Service Dapr Sidecar
-  notification-service-dapr:
-    image: "daprio/daprd:edge"
-    container_name: ecommerce-notification-service-dapr
-    command: ["./daprd",
-      "-app-id", "notification-service",
-      "-app-port", "8080",
-      "-dapr-http-port", "3503",
-      "-dapr-grpc-port", "50003",
-      "-components-path", "/components",
-      "-config", "/configuration/config.yaml"]
-    volumes:
-      - "./infra/dapr/components:/components"
-      - "./infra/dapr/configuration:/configuration"
-    depends_on:
-      - notification-service
-      - redis
-    network_mode: "service:notification-service"
+    network_mode: "service:backend-service"
 
   # Dapr Placement Service
   placement:

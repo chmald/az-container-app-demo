@@ -9,7 +9,6 @@ README.md
 .nyc_output
 coverage
 .coverage
-dist
 build
 *.log
 .DS_Store
