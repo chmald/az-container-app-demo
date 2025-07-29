@@ -32,43 +32,43 @@ api.interceptors.response.use(
 export const inventoryApi = {
   getProducts: async (): Promise<Product[]> => {
     const response = await api.get('/api/proxy/inventory');
-    return response.data;
+    return response.data.data || response.data;
   },
 
   getProduct: async (id: string): Promise<Product> => {
     const response = await api.get(`/api/proxy/inventory/${id}`);
-    return response.data;
+    return response.data.data || response.data;
   },
 
   updateInventory: async (id: string, quantity: number): Promise<Product> => {
     const response = await api.put(`/api/proxy/inventory/${id}`, {
       quantity,
     });
-    return response.data;
+    return response.data.data || response.data;
   },
 };
 
 export const orderApi = {
   getOrders: async (): Promise<Order[]> => {
     const response = await api.get('/api/proxy/orders');
-    return response.data;
+    return response.data.data || response.data;
   },
 
   getOrder: async (id: string): Promise<Order> => {
     const response = await api.get(`/api/proxy/orders/${id}`);
-    return response.data;
+    return response.data.data || response.data;
   },
 
   createOrder: async (orderData: Partial<Order>): Promise<Order> => {
     const response = await api.post('/api/proxy/orders', orderData);
-    return response.data;
+    return response.data.data || response.data;
   },
 
   updateOrderStatus: async (id: string, status: string): Promise<Order> => {
     const response = await api.put(`/api/proxy/orders/${id}/status`, {
       status,
     });
-    return response.data;
+    return response.data.data || response.data;
   },
 };
 

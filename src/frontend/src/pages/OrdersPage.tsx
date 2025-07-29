@@ -114,7 +114,7 @@ const OrdersPage: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {orders.map((order) => (
+              {Array.isArray(orders) && orders.map((order) => (
                 <TableRow key={order.id} hover>
                   <TableCell>
                     <Typography variant="body2" fontFamily="monospace">
@@ -128,9 +128,9 @@ const OrdersPage: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2">
-                      {order.items.length} item(s)
+                      {Array.isArray(order.items) ? order.items.length : 0} item(s)
                     </Typography>
-                    {order.items.map((item, index) => (
+                    {Array.isArray(order.items) && order.items.map((item, index) => (
                       <Typography
                         key={index}
                         variant="caption"

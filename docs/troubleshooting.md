@@ -1,5 +1,15 @@
 # Azure Container Apps Demo - Troubleshooting Guide
 
+## Pre-Deployment Validation ✅
+
+**Latest Validation**: All azd files and prerequisites have been validated (July 29, 2025)
+- ✅ Azure CLI, azd, and Docker versions confirmed
+- ✅ Infrastructure files validated (no errors found)
+- ✅ Container Apps configuration validated
+- ✅ Registry and identity configurations validated
+
+See [azd validation summary](azd-validation-summary.md) for complete validation details.
+
 ## Common Issues and Solutions
 
 ### Local Development

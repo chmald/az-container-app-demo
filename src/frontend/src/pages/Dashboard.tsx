@@ -28,10 +28,10 @@ const Dashboard: React.FC = () => {
     dispatch(fetchOrders());
   }, [dispatch]);
 
-  const totalProducts = products.length;
-  const totalOrders = orders.length;
-  const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
-  const lowStockProducts = products.filter(product => product.quantity < 10).length;
+  const totalProducts = Array.isArray(products) ? products.length : 0;
+  const totalOrders = Array.isArray(orders) ? orders.length : 0;
+  const totalRevenue = Array.isArray(orders) ? orders.reduce((sum, order) => sum + order.total, 0) : 0;
+  const lowStockProducts = Array.isArray(products) ? products.filter(product => product.quantity < 10).length : 0;
 
   const stats = [
     {

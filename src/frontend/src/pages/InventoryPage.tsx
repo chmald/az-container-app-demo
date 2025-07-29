@@ -79,7 +79,7 @@ const InventoryPage: React.FC = () => {
         </Box>
       ) : (
         <Grid container spacing={3}>
-          {products.map((product) => {
+          {Array.isArray(products) && products.map((product) => {
             const stockStatus = getStockStatus(product.quantity);
             return (
               <Grid item xs={12} sm={6} md={4} key={product.id}>

@@ -477,12 +477,12 @@ resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
   ]
 }
 
-// Order Service Container App
-resource orderServiceApp 'Microsoft.App/containerApps@2023-05-01' = {
-  name: '${appName}-${environment}-order'
+// Order Service Container App (renamed to backend-service to match azure.yaml)
+resource backendServiceApp 'Microsoft.App/containerApps@2023-05-01' = {
+  name: '${appName}-${environment}-backend'
   location: location
   tags: union(tags, {
-    'azd-service-name': 'order-service'
+    'azd-service-name': 'backend-service'
   })
   identity: {
     type: 'UserAssigned'
@@ -526,7 +526,7 @@ resource orderServiceApp 'Microsoft.App/containerApps@2023-05-01' = {
       ]
       dapr: {
         enabled: true
-        appId: 'order-service'
+        appId: 'backend-service'
         appPort: 3001
         appProtocol: 'http'
       }
@@ -534,7 +534,7 @@ resource orderServiceApp 'Microsoft.App/containerApps@2023-05-01' = {
     template: {
       containers: [
         {
-          name: 'order-service'
+          name: 'backend-service'
           image: 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
           env: [
             {
@@ -588,210 +588,6 @@ resource orderServiceApp 'Microsoft.App/containerApps@2023-05-01' = {
   ]
 }
 
-// Inventory Service Container App
-resource inventoryServiceApp 'Microsoft.App/containerApps@2023-05-01' = {
-  name: '${appName}-${environment}-inventory'
-  location: location
-  tags: union(tags, {
-    'azd-service-name': 'inventory-service'
-  })
-  identity: {
-    type: 'UserAssigned'
-    userAssignedIdentities: {
-      '${userManagedIdentity.id}': {}
-    }
-  }
-  properties: {
-    environmentId: containerAppsEnvironment.id
-    configuration: {
-      activeRevisionsMode: 'Single'
-      ingress: {
-        external: false
-        targetPort: 8000
-        corsPolicy: {
-          allowedOrigins: ['*']
-          allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
-          allowedHeaders: ['*']
-          allowCredentials: false
-        }
-        traffic: [
-          {
-            latestRevision: true
-            weight: 100
-          }
-        ]
-      }
-      registries: [
-        {
-          server: acr.properties.loginServer
-          identity: userManagedIdentity.id
-        }
-      ]
-      secrets: [
-        {
-          name: 'postgres-connection-string'
-          keyVaultUrl: '${keyVault.properties.vaultUri}secrets/postgres-connection-string'
-          identity: userManagedIdentity.id
-        }
-      ]
-      dapr: {
-        enabled: true
-        appId: 'inventory-service'
-        appPort: 8000
-        appProtocol: 'http'
-      }
-    }
-    template: {
-      containers: [
-        {
-          name: 'inventory-service'
-          image: 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
-          env: [
-            {
-              name: 'LOG_LEVEL'
-              value: 'INFO'
-            }
-            {
-              name: 'PORT'
-              value: '8000'
-            }
-            {
-              name: 'DATABASE_URL'
-              secretRef: 'postgres-connection-string'
-            }
-            {
-              name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-              value: appInsights.properties.ConnectionString
-            }
-          ]
-          resources: {
-            cpu: json('0.5')
-            memory: '1Gi'
-          }
-          probes: [
-            {
-              type: 'Readiness'
-              httpGet: {
-                path: '/health'
-                port: 8000
-              }
-              initialDelaySeconds: 10
-              periodSeconds: 10
-            }
-          ]
-        }
-      ]
-      scale: {
-        minReplicas: 1
-        maxReplicas: 5
-      }
-    }
-  }
-  dependsOn: [
-    keyVaultSecretsUserRoleAssignment
-    acrPullRoleAssignment
-    postgresConnectionStringSecret
-  ]
-}
-
-// Notification Service Container App
-resource notificationServiceApp 'Microsoft.App/containerApps@2023-05-01' = {
-  name: '${appName}-${environment}-notify'
-  location: location
-  tags: union(tags, {
-    'azd-service-name': 'notification-service'
-  })
-  identity: {
-    type: 'UserAssigned'
-    userAssignedIdentities: {
-      '${userManagedIdentity.id}': {}
-    }
-  }
-  properties: {
-    environmentId: containerAppsEnvironment.id
-    configuration: {
-      activeRevisionsMode: 'Single'
-      ingress: {
-        external: false
-        targetPort: 8080
-        corsPolicy: {
-          allowedOrigins: ['*']
-          allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
-          allowedHeaders: ['*']
-          allowCredentials: false
-        }
-        traffic: [
-          {
-            latestRevision: true
-            weight: 100
-          }
-        ]
-      }
-      registries: [
-        {
-          server: acr.properties.loginServer
-          identity: userManagedIdentity.id
-        }
-      ]
-      dapr: {
-        enabled: true
-        appId: 'notification-service'
-        appPort: 8080
-        appProtocol: 'http'
-      }
-    }
-    template: {
-      containers: [
-        {
-          name: 'notification-service'
-          image: 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
-          env: [
-            {
-              name: 'GIN_MODE'
-              value: 'release'
-            }
-            {
-              name: 'LOG_LEVEL'
-              value: 'info'
-            }
-            {
-              name: 'PORT'
-              value: '8080'
-            }
-            {
-              name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-              value: appInsights.properties.ConnectionString
-            }
-          ]
-          resources: {
-            cpu: json('0.25')
-            memory: '0.5Gi'
-          }
-          probes: [
-            {
-              type: 'Readiness'
-              httpGet: {
-                path: '/health'
-                port: 8080
-              }
-              initialDelaySeconds: 10
-              periodSeconds: 10
-            }
-          ]
-        }
-      ]
-      scale: {
-        minReplicas: 1
-        maxReplicas: 3
-      }
-    }
-  }
-  dependsOn: [
-    keyVaultSecretsUserRoleAssignment
-    acrPullRoleAssignment
-  ]
-}
-
 // Outputs required by azd
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = acr.properties.loginServer
 output AZURE_CONTAINER_REGISTRY_NAME string = acr.name
@@ -800,6 +596,4 @@ output AZURE_CONTAINER_APPS_ENVIRONMENT_NAME string = containerAppsEnvironment.n
 output AZURE_KEY_VAULT_NAME string = keyVault.name
 output AZURE_KEY_VAULT_ENDPOINT string = keyVault.properties.vaultUri
 output SERVICE_FRONTEND_ENDPOINT_URL string = 'https://${frontendApp.properties.configuration.ingress.fqdn}'
-output SERVICE_ORDER_SERVICE_ENDPOINT_URL string = 'https://${orderServiceApp.properties.configuration.ingress.fqdn}'
-output SERVICE_INVENTORY_SERVICE_ENDPOINT_URL string = 'inventory-service'  // Internal Dapr service name
-output SERVICE_NOTIFICATION_SERVICE_ENDPOINT_URL string = 'notification-service'  // Internal Dapr service name
+output SERVICE_BACKEND_SERVICE_ENDPOINT_URL string = 'https://${backendServiceApp.properties.configuration.ingress.fqdn}'
