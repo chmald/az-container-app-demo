@@ -36,48 +36,18 @@ sleep 10
 # Start Dapr applications
 echo "Starting Dapr applications..."
 
-# Start Order Service with Dapr
-echo "Starting Order Service..."
-cd src/order-service
+# Start Backend Service with Dapr
+echo "Starting Backend Service..."
+cd src/backend-service
 npm install
 dapr run \
-    --app-id order-service \
+    --app-id backend-service \
     --app-port 3001 \
     --dapr-http-port 3501 \
     --dapr-grpc-port 50001 \
     --components-path ../../infra/dapr/components \
     --config ../../infra/dapr/configuration/config.yaml \
     npm start &
-
-cd ../..
-
-# Start Inventory Service with Dapr
-echo "Starting Inventory Service..."
-cd src/inventory-service
-pip install -r requirements.txt
-dapr run \
-    --app-id inventory-service \
-    --app-port 8000 \
-    --dapr-http-port 3502 \
-    --dapr-grpc-port 50002 \
-    --components-path ../../infra/dapr/components \
-    --config ../../infra/dapr/configuration/config.yaml \
-    python main.py &
-
-cd ../..
-
-# Start Notification Service with Dapr
-echo "Starting Notification Service..."
-cd src/notification-service
-go mod tidy
-dapr run \
-    --app-id notification-service \
-    --app-port 8080 \
-    --dapr-http-port 3503 \
-    --dapr-grpc-port 50003 \
-    --components-path ../../infra/dapr/components \
-    --config ../../infra/dapr/configuration/config.yaml \
-    go run main.go &
 
 cd ../..
 
@@ -93,16 +63,13 @@ echo ""
 echo "🚀 All services started successfully!"
 echo ""
 echo "Services running on:"
-echo "  Frontend:          http://localhost:3000"
-echo "  Order Service:     http://localhost:3001 (Dapr: http://localhost:3501)"
-echo "  Inventory Service: http://localhost:8000 (Dapr: http://localhost:3502)"
-echo "  Notification Svc:  http://localhost:8080 (Dapr: http://localhost:3503)"
-echo "  PostgreSQL:        localhost:5432"
-echo "  Redis:             localhost:6379"
+echo "  Frontend:         http://localhost:3000"
+echo "  Backend Service:  http://localhost:3001 (Dapr: http://localhost:3501)"
+echo "  PostgreSQL:       localhost:5432"
+echo "  Redis:            localhost:6379"
 echo ""
 echo "API Documentation:"
-echo "  Order Service:     http://localhost:3001/api-docs"
-echo "  Inventory Service: http://localhost:8000/api/docs"
+echo "  Backend Service:  http://localhost:3001/api-docs"
 echo ""
 echo "To stop all services, run: ./scripts/stop-local.sh"
-echo "To view logs, run: dapr logs --app-id <service-name>"
+echo "To view logs, run: dapr logs --app-id backend-service"

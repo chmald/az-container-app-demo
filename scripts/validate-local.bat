@@ -64,19 +64,11 @@ echo.
 echo Checking Dapr service discovery:
 
 REM Check if services can discover each other through Dapr
-curl -s -f -m 10 "http://localhost:3501/v1.0/invoke/inventory-service/method/health" >nul 2>&1
+curl -s -f -m 10 "http://localhost:3501/v1.0/invoke/backend-service/method/health" >nul 2>&1
 if %ERRORLEVEL% EQU 0 (
-    echo   [OK] Order Service can communicate with Inventory Service via Dapr
+    echo   [OK] Frontend can communicate with Backend Service via Dapr
 ) else (
-    echo   [FAIL] Order Service cannot communicate with Inventory Service via Dapr
-    set "ALL_HEALTHY=false"
-)
-
-curl -s -f -m 10 "http://localhost:3502/v1.0/invoke/notification-service/method/health" >nul 2>&1
-if %ERRORLEVEL% EQU 0 (
-    echo   [OK] Inventory Service can communicate with Notification Service via Dapr
-) else (
-    echo   [FAIL] Inventory Service cannot communicate with Notification Service via Dapr
+    echo   [FAIL] Frontend cannot communicate with Backend Service via Dapr
     set "ALL_HEALTHY=false"
 )
 
@@ -98,9 +90,7 @@ if "%ALL_HEALTHY%"=="true" (
 ) else (
     echo Some services are not healthy. Please check the logs:
     echo   dapr logs --app-id frontend
-    echo   dapr logs --app-id order-service
-    echo   dapr logs --app-id inventory-service
-    echo   dapr logs --app-id notification-service
+    echo   dapr logs --app-id backend-service
     echo.
     echo Or check Docker logs:
     echo   docker-compose logs postgres

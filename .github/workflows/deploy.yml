@@ -26,16 +26,6 @@ jobs:
         cache: 'npm'
         cache-dependency-path: src/*/package*.json
 
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-
-    - name: Setup Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.19'
-
     # Frontend Tests
     - name: Install Frontend Dependencies
       run: |
@@ -52,39 +42,21 @@ jobs:
         cd src/frontend
         npm run build
 
-    # Order Service Tests
-    - name: Install Order Service Dependencies
+    # Backend Service Tests
+    - name: Install Backend Service Dependencies
       run: |
-        cd src/order-service
+        cd src/backend-service
         npm ci
 
-    - name: Test Order Service
+    - name: Test Backend Service
       run: |
-        cd src/order-service
+        cd src/backend-service
         npm test
 
-    - name: Build Order Service
+    - name: Build Backend Service
       run: |
-        cd src/order-service
+        cd src/backend-service
         npm run build
-
-    # Inventory Service Tests
-    - name: Install Inventory Service Dependencies
-      run: |
-        cd src/inventory-service
-        pip install -r requirements.txt
-
-    - name: Test Inventory Service
-      run: |
-        cd src/inventory-service
-        python -m pytest tests/ -v
-
-    # Notification Service Tests
-    - name: Test Notification Service
-      run: |
-        cd src/notification-service
-        go mod download
-        go test -v ./...
 
     # Security Scanning
     - name: Run Trivy vulnerability scanner
@@ -127,29 +99,13 @@ jobs:
         docker tag ${{ env.REGISTRY_NAME }}.azurecr.io/frontend:${{ github.sha }} ${{ env.REGISTRY_NAME }}.azurecr.io/frontend:latest
         docker push ${{ env.REGISTRY_NAME }}.azurecr.io/frontend:latest
 
-    - name: Build and Push Order Service Image
+    - name: Build and Push Backend Service Image
       run: |
-        cd src/order-service
-        docker build -t ${{ env.REGISTRY_NAME }}.azurecr.io/order-service:${{ github.sha }} .
-        docker push ${{ env.REGISTRY_NAME }}.azurecr.io/order-service:${{ github.sha }}
-        docker tag ${{ env.REGISTRY_NAME }}.azurecr.io/order-service:${{ github.sha }} ${{ env.REGISTRY_NAME }}.azurecr.io/order-service:latest
-        docker push ${{ env.REGISTRY_NAME }}.azurecr.io/order-service:latest
-
-    - name: Build and Push Inventory Service Image
-      run: |
-        cd src/inventory-service
-        docker build -t ${{ env.REGISTRY_NAME }}.azurecr.io/inventory-service:${{ github.sha }} .
-        docker push ${{ env.REGISTRY_NAME }}.azurecr.io/inventory-service:${{ github.sha }}
-        docker tag ${{ env.REGISTRY_NAME }}.azurecr.io/inventory-service:${{ github.sha }} ${{ env.REGISTRY_NAME }}.azurecr.io/inventory-service:latest
-        docker push ${{ env.REGISTRY_NAME }}.azurecr.io/inventory-service:latest
-
-    - name: Build and Push Notification Service Image
-      run: |
-        cd src/notification-service
-        docker build -t ${{ env.REGISTRY_NAME }}.azurecr.io/notification-service:${{ github.sha }} .
-        docker push ${{ env.REGISTRY_NAME }}.azurecr.io/notification-service:${{ github.sha }}
-        docker tag ${{ env.REGISTRY_NAME }}.azurecr.io/notification-service:${{ github.sha }} ${{ env.REGISTRY_NAME }}.azurecr.io/notification-service:latest
-        docker push ${{ env.REGISTRY_NAME }}.azurecr.io/notification-service:latest
+        cd src/backend-service
+        docker build -t ${{ env.REGISTRY_NAME }}.azurecr.io/backend-service:${{ github.sha }} .
+        docker push ${{ env.REGISTRY_NAME }}.azurecr.io/backend-service:${{ github.sha }}
+        docker tag ${{ env.REGISTRY_NAME }}.azurecr.io/backend-service:${{ github.sha }} ${{ env.REGISTRY_NAME }}.azurecr.io/backend-service:latest
+        docker push ${{ env.REGISTRY_NAME }}.azurecr.io/backend-service:latest
 
   deploy-infrastructure:
     needs: build-and-push-images
@@ -199,34 +155,22 @@ jobs:
           --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
           --image ${{ env.REGISTRY_NAME }}.azurecr.io/frontend:${{ github.sha }}
 
-        # Update Order Service
+        # Update Backend Service
         az containerapp update \
-          --name ecommerce-dev-order-service \
+          --name ecommerce-dev-backend-service \
           --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-          --image ${{ env.REGISTRY_NAME }}.azurecr.io/order-service:${{ github.sha }}
-
-        # Update Inventory Service
-        az containerapp update \
-          --name ecommerce-dev-inventory-service \
-          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-          --image ${{ env.REGISTRY_NAME }}.azurecr.io/inventory-service:${{ github.sha }}
-
-        # Update Notification Service
-        az containerapp update \
-          --name ecommerce-dev-notification-service \
-          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-          --image ${{ env.REGISTRY_NAME }}.azurecr.io/notification-service:${{ github.sha }}
+          --image ${{ env.REGISTRY_NAME }}.azurecr.io/backend-service:${{ github.sha }}
 
     - name: Get Application URLs
       run: |
         FRONTEND_URL=$(az containerapp show --name ecommerce-dev-frontend --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query "properties.configuration.ingress.fqdn" -o tsv)
         echo "Frontend URL: https://$FRONTEND_URL"
         
-        ORDER_SERVICE_URL=$(az containerapp show --name ecommerce-dev-order-service --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query "properties.configuration.ingress.fqdn" -o tsv)
-        echo "Order Service URL: https://$ORDER_SERVICE_URL"
+        BACKEND_SERVICE_URL=$(az containerapp show --name ecommerce-dev-backend-service --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query "properties.configuration.ingress.fqdn" -o tsv)
+        echo "Backend Service URL: https://$BACKEND_SERVICE_URL"
 
         echo "FRONTEND_URL=https://$FRONTEND_URL" >> $GITHUB_ENV
-        echo "ORDER_SERVICE_URL=https://$ORDER_SERVICE_URL" >> $GITHUB_ENV
+        echo "BACKEND_SERVICE_URL=https://$BACKEND_SERVICE_URL" >> $GITHUB_ENV
 
     - name: Run Health Checks
       run: |
@@ -236,8 +180,8 @@ jobs:
         # Check Frontend
         curl -f ${{ env.FRONTEND_URL }}/health || echo "Frontend health check failed"
         
-        # Check Order Service
-        curl -f ${{ env.ORDER_SERVICE_URL }}/health || echo "Order Service health check failed"
+        # Check Backend Service
+        curl -f ${{ env.BACKEND_SERVICE_URL }}/health || echo "Backend Service health check failed"
 
     - name: Create GitHub Deployment
       uses: chrnorm/deployment-action@v2

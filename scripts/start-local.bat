@@ -46,49 +46,17 @@ echo.
 echo Starting Dapr applications...
 echo.
 
-REM Start Order Service with Dapr
-echo Starting Order Service...
-cd src\order-service
+REM Start Backend Service with Dapr
+echo Starting Backend Service...
+cd src\backend-service
 call npm install
 if %ERRORLEVEL% NEQ 0 (
-    echo Error: Failed to install Order Service dependencies
+    echo Error: Failed to install Backend Service dependencies
     cd ..\..
     exit /b 1
 )
 
-start "Order Service" cmd /k "dapr run --app-id order-service --app-port 3001 --dapr-http-port 3501 --dapr-grpc-port 50001 --components-path ..\..\infra\dapr\components --config ..\..\infra\dapr\configuration\config.yaml npm start"
-cd ..\..
-
-REM Wait a bit before starting next service
-timeout /t 3 /nobreak >nul
-
-REM Start Inventory Service with Dapr
-echo Starting Inventory Service...
-cd src\inventory-service
-pip install -r requirements.txt >nul
-if %ERRORLEVEL% NEQ 0 (
-    echo Error: Failed to install Inventory Service dependencies
-    cd ..\..
-    exit /b 1
-)
-
-start "Inventory Service" cmd /k "dapr run --app-id inventory-service --app-port 8000 --dapr-http-port 3502 --dapr-grpc-port 50002 --components-path ..\..\infra\dapr\components --config ..\..\infra\dapr\configuration\config.yaml python main.py"
-cd ..\..
-
-REM Wait a bit before starting next service
-timeout /t 3 /nobreak >nul
-
-REM Start Notification Service with Dapr
-echo Starting Notification Service...
-cd src\notification-service
-go mod tidy >nul
-if %ERRORLEVEL% NEQ 0 (
-    echo Error: Failed to prepare Notification Service dependencies
-    cd ..\..
-    exit /b 1
-)
-
-start "Notification Service" cmd /k "dapr run --app-id notification-service --app-port 8080 --dapr-http-port 3503 --dapr-grpc-port 50003 --components-path ..\..\infra\dapr\components --config ..\..\infra\dapr\configuration\config.yaml go run main.go"
+start "Backend Service" cmd /k "dapr run --app-id backend-service --app-port 3001 --dapr-http-port 3501 --dapr-grpc-port 50001 --components-path ..\..\infra\dapr\components --config ..\..\infra\dapr\configuration\config.yaml npm start"
 cd ..\..
 
 REM Wait a bit before starting frontend
@@ -135,21 +103,18 @@ echo ======================================================================
 echo.
 echo Services running on:
 echo   Frontend:          http://localhost:3000
-echo   Order Service:     http://localhost:3001 ^(Dapr: http://localhost:3501^)
-echo   Inventory Service: http://localhost:8000 ^(Dapr: http://localhost:3502^)
-echo   Notification Svc:  http://localhost:8080 ^(Dapr: http://localhost:3503^)
+echo   Backend Service:   http://localhost:3001 ^(Dapr: http://localhost:3501^)
 echo   PostgreSQL:        localhost:5432
 echo   Redis:             localhost:6379
 echo.
 echo API Documentation:
-echo   Order Service:     http://localhost:3001/api-docs
-echo   Inventory Service: http://localhost:8000/api/docs
+echo   Backend Service:   http://localhost:3001/api-docs
 echo.
 echo Each service is running in its own command window.
 echo To stop all services, run: scripts\stop-local.bat
-echo To view Dapr logs, run: dapr logs --app-id ^<service-name^>
+echo To view Dapr logs, run: dapr logs --app-id backend-service
 echo.
-echo Available Dapr service IDs: frontend, order-service, inventory-service, notification-service
+echo Available Dapr service IDs: frontend, backend-service
 echo ======================================================================
 
 pause
