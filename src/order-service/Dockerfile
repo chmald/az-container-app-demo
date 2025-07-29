@@ -1,5 +1,5 @@
 # Multi-stage build for Node.js Order Service
-FROM node:18-alpine AS builder
+FROM node:18-alpine AS deps
 
 # Set working directory
 WORKDIR /app
@@ -7,8 +7,16 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install dependencies (including dev dependencies needed for build)
+RUN npm ci --frozen-lockfile
+
+# Build stage
+FROM node:18-alpine AS builder
+
+WORKDIR /app
+
+# Copy dependencies from deps stage
+COPY --from=deps /app/node_modules ./node_modules
 
 # Copy source code
 COPY . .

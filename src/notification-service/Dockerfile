@@ -1,8 +1,8 @@
 # Multi-stage build for Go Notification Service
 FROM golang:1.19-alpine AS builder
 
-# Install git and ca-certificates
-RUN apk add --no-cache git ca-certificates
+# Install git and ca-certificates, update apk index
+RUN apk update && apk upgrade && apk add --no-cache git ca-certificates
 
 # Set working directory
 WORKDIR /app
@@ -20,10 +20,10 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
 
 # Production stage
-FROM alpine:latest
+FROM alpine:3.19
 
-# Install ca-certificates for SSL
-RUN apk --no-cache add ca-certificates
+# Update and upgrade packages, install ca-certificates for SSL
+RUN apk update && apk upgrade && apk --no-cache add ca-certificates
 
 # Create non-root user
 RUN addgroup -g 1001 -S appuser && \

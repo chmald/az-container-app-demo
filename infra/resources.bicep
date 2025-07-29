@@ -11,7 +11,7 @@ param resourceToken string
 param principalId string = ''
 
 // Service names with resource token
-var appName = 'ecommerce'
+var appName = 'ecomm'
 var environment = 'dev'
 
 @description('Container Apps Environment name')
@@ -24,7 +24,7 @@ var logAnalyticsWorkspaceName = '${appName}-${environment}-logs-${resourceToken}
 var appInsightsName = '${appName}-${environment}-ai-${resourceToken}'
 
 @description('Azure Container Registry name')
-var acrName = '${appName}${environment}${resourceToken}'
+var acrName = '${appName}${environment}${take(resourceToken, 12)}'
 
 @description('PostgreSQL server name')
 var postgresServerName = '${appName}-${environment}-pg-${resourceToken}'
@@ -33,7 +33,7 @@ var postgresServerName = '${appName}-${environment}-pg-${resourceToken}'
 var redisCacheName = '${appName}-${environment}-redis-${resourceToken}'
 
 @description('Key Vault name')
-var keyVaultName = '${appName}-${environment}-${resourceToken}-kv'
+var keyVaultName = '${appName}${environment}${take(resourceToken, 12)}kv'
 
 @description('Virtual Network name')
 var vnetName = '${appName}-${environment}-vnet'
@@ -142,7 +142,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     enableRbacAuthorization: true
     enableSoftDelete: true
     softDeleteRetentionInDays: 7
-    enablePurgeProtection: false  // Set to false for demo environments
+    enablePurgeProtection: true  // Set to false for demo environments
   }
 }
 
@@ -324,8 +324,7 @@ resource daprStateStore 'Microsoft.App/managedEnvironments/daprComponents@2023-0
     secrets: [
       {
         name: 'redis-password'
-        keyVaultUrl: '${keyVault.properties.vaultUri}secrets/redis-password'
-        identity: userManagedIdentity.id
+        value: redisCache.listKeys().primaryKey
       }
     ]
   }
@@ -355,8 +354,7 @@ resource daprPubSub 'Microsoft.App/managedEnvironments/daprComponents@2023-05-01
     secrets: [
       {
         name: 'redis-password'
-        keyVaultUrl: '${keyVault.properties.vaultUri}secrets/redis-password'
-        identity: userManagedIdentity.id
+        value: redisCache.listKeys().primaryKey
       }
     ]
   }
@@ -366,7 +364,9 @@ resource daprPubSub 'Microsoft.App/managedEnvironments/daprComponents@2023-05-01
 resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
   name: '${appName}-${environment}-frontend'
   location: location
-  tags: tags
+  tags: union(tags, {
+    'azd-service-name': 'frontend'
+  })
   identity: {
     type: 'UserAssigned'
     userAssignedIdentities: {
@@ -379,7 +379,7 @@ resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
       activeRevisionsMode: 'Single'
       ingress: {
         external: true
-        targetPort: 80
+        targetPort: 3000
         allowInsecure: false
         corsPolicy: {
           allowedOrigins: ['*']
@@ -403,7 +403,7 @@ resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
       dapr: {
         enabled: true
         appId: 'frontend'
-        appPort: 80
+        appPort: 3000
         appProtocol: 'http'
       }
     }
@@ -414,8 +414,16 @@ resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
           image: 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
           env: [
             {
-              name: 'REACT_APP_API_URL'
-              value: 'https://${orderServiceApp.properties.configuration.ingress.fqdn}'
+              name: 'PORT'
+              value: '3000'
+            }
+            {
+              name: 'DAPR_HTTP_PORT'
+              value: '3500'
+            }
+            {
+              name: 'NODE_ENV'
+              value: 'production'
             }
           ]
           resources: {
@@ -426,18 +434,37 @@ resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
             {
               type: 'Readiness'
               httpGet: {
-                path: '/'
-                port: 80
+                path: '/health'
+                port: 3000
               }
               initialDelaySeconds: 10
               periodSeconds: 10
+            }
+            {
+              type: 'Liveness'
+              httpGet: {
+                path: '/health'
+                port: 3000
+              }
+              initialDelaySeconds: 30
+              periodSeconds: 30
             }
           ]
         }
       ]
       scale: {
         minReplicas: 1
-        maxReplicas: 3
+        maxReplicas: 10
+        rules: [
+          {
+            name: 'http-rule'
+            http: {
+              metadata: {
+                concurrentRequests: '100'
+              }
+            }
+          }
+        ]
       }
     }
   }
@@ -449,9 +476,11 @@ resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
 
 // Order Service Container App
 resource orderServiceApp 'Microsoft.App/containerApps@2023-05-01' = {
-  name: '${appName}-${environment}-order-service'
+  name: '${appName}-${environment}-order'
   location: location
-  tags: tags
+  tags: union(tags, {
+    'azd-service-name': 'order-service'
+  })
   identity: {
     type: 'UserAssigned'
     userAssignedIdentities: {
@@ -558,9 +587,11 @@ resource orderServiceApp 'Microsoft.App/containerApps@2023-05-01' = {
 
 // Inventory Service Container App
 resource inventoryServiceApp 'Microsoft.App/containerApps@2023-05-01' = {
-  name: '${appName}-${environment}-inventory-service'
+  name: '${appName}-${environment}-inventory'
   location: location
-  tags: tags
+  tags: union(tags, {
+    'azd-service-name': 'inventory-service'
+  })
   identity: {
     type: 'UserAssigned'
     userAssignedIdentities: {
@@ -572,9 +603,8 @@ resource inventoryServiceApp 'Microsoft.App/containerApps@2023-05-01' = {
     configuration: {
       activeRevisionsMode: 'Single'
       ingress: {
-        external: true
+        external: false
         targetPort: 8000
-        allowInsecure: false
         corsPolicy: {
           allowedOrigins: ['*']
           allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
@@ -663,9 +693,11 @@ resource inventoryServiceApp 'Microsoft.App/containerApps@2023-05-01' = {
 
 // Notification Service Container App
 resource notificationServiceApp 'Microsoft.App/containerApps@2023-05-01' = {
-  name: '${appName}-${environment}-notification-service'
+  name: '${appName}-${environment}-notify'
   location: location
-  tags: tags
+  tags: union(tags, {
+    'azd-service-name': 'notification-service'
+  })
   identity: {
     type: 'UserAssigned'
     userAssignedIdentities: {
@@ -677,9 +709,8 @@ resource notificationServiceApp 'Microsoft.App/containerApps@2023-05-01' = {
     configuration: {
       activeRevisionsMode: 'Single'
       ingress: {
-        external: true
+        external: false
         targetPort: 8080
-        allowInsecure: false
         corsPolicy: {
           allowedOrigins: ['*']
           allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
@@ -767,5 +798,3 @@ output AZURE_KEY_VAULT_NAME string = keyVault.name
 output AZURE_KEY_VAULT_ENDPOINT string = keyVault.properties.vaultUri
 output SERVICE_FRONTEND_ENDPOINT_URL string = 'https://${frontendApp.properties.configuration.ingress.fqdn}'
 output SERVICE_ORDER_SERVICE_ENDPOINT_URL string = 'https://${orderServiceApp.properties.configuration.ingress.fqdn}'
-output SERVICE_INVENTORY_SERVICE_ENDPOINT_URL string = 'https://${inventoryServiceApp.properties.configuration.ingress.fqdn}'
-output SERVICE_NOTIFICATION_SERVICE_ENDPOINT_URL string = 'https://${notificationServiceApp.properties.configuration.ingress.fqdn}'

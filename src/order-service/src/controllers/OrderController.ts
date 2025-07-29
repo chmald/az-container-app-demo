@@ -30,7 +30,7 @@ export class OrderController {
     }
   };
 
-  getOrderById = async (req: Request, res: Response) => {
+  getOrderById = async (req: Request, res: Response): Promise<Response> => {
     try {
       const { id } = req.params;
       const order = await this.orderService.getOrderById(id);
@@ -47,10 +47,10 @@ export class OrderController {
         data: order
       };
 
-      res.json(response);
+      return res.json(response);
     } catch (error) {
       logger.error('Error in getOrderById controller', { orderId: req.params.id, error });
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         error: 'Failed to retrieve order'
       });
@@ -78,7 +78,7 @@ export class OrderController {
     }
   };
 
-  updateOrderStatus = async (req: Request, res: Response) => {
+  updateOrderStatus = async (req: Request, res: Response): Promise<Response> => {
     try {
       const { id } = req.params;
       const { status }: UpdateOrderStatusRequest = req.body;
@@ -91,7 +91,7 @@ export class OrderController {
         message: 'Order status updated successfully'
       };
 
-      res.json(response);
+      return res.json(response);
     } catch (error) {
       logger.error('Error in updateOrderStatus controller', { 
         orderId: req.params.id, 
@@ -105,7 +105,7 @@ export class OrderController {
         });
       }
 
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         error: 'Failed to update order status'
       });

@@ -19,6 +19,23 @@ This demo implements a modern microservices architecture with the following comp
 - **Application Insights** for monitoring and observability
 - **Azure Key Vault** for secrets management
 
+### Communication Patterns
+- **Frontend ↔ Backend Services**: Dapr service invocation through frontend server proxy
+  - React app served by Node.js/Express server with Dapr sidecar
+  - Frontend server proxies API calls to backend services via Dapr
+  - Uses `/api/proxy/*` endpoints that translate to Dapr service invocation
+- **Backend Service ↔ Backend Service**: Dapr service-to-service invocation
+  - Order Service ↔ Inventory Service via Dapr
+  - Notification Service ↔ Other services via Dapr pub/sub
+- **State Management**: Dapr state store with Redis backend
+- **Event Communication**: Dapr pub/sub with Redis broker
+
+### Frontend Architecture
+- **React Build**: Static React app built with TypeScript and Material-UI
+- **Node.js Server**: Express server that serves React app and proxies API calls
+- **Dapr Integration**: Frontend server has Dapr sidecar for service communication
+- **Proxy Pattern**: `/api/proxy/orders` → Dapr → `order-service/api/orders`
+
 ## 🚀 Quick Start
 
 > **👆 Want to deploy immediately?** See [QUICKSTART.md](QUICKSTART.md) for a condensed deployment guide.
@@ -73,7 +90,7 @@ The easiest way to deploy this application to Azure is using the Azure Developer
 **Prerequisites:**
 - [Azure Developer CLI (azd)](https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/install-azd) installed
 - Azure CLI authenticated (`az login`)
-- Docker installed
+- Docker installed and running
 
 **Quick Deployment:**
 
@@ -95,7 +112,32 @@ The easiest way to deploy this application to Azure is using the Azure Developer
    azd up
    ```
 
-3. **Access your application**
+   > **Important**: The first `azd up` command will:
+   > - Create Azure infrastructure (Container Apps, Registry, Database, etc.)
+   > - Build Docker images from your source code
+   > - Push images to Azure Container Registry
+   > - Deploy your actual application containers (not starter images)
+
+3. **Validate your deployment**
+   
+   After deployment, verify your application is working correctly:
+   
+   ```bash
+   # Check deployment status
+   azd show
+   
+   # View live logs
+   azd logs --follow
+   
+   # Test the frontend
+   curl https://your-frontend-url.azurecontainerapps.io
+   
+   # Test the APIs (replace with your actual URLs)
+   curl https://your-order-service-url.azurecontainerapps.io/health
+   curl https://your-inventory-service-url.azurecontainerapps.io/health
+   ```
+
+4. **Access your application**
    After deployment completes, azd will display the URLs for your services:
    - Frontend: `https://your-frontend-url.azurecontainerapps.io`
    - Order Service API: `https://your-order-service-url.azurecontainerapps.io`
@@ -119,57 +161,132 @@ azd env select  # Switch between environments
 - Modify `infra/main.parameters.json` for infrastructure parameters
 - Update `azure.yaml` for advanced deployment configuration
 
-#### Option 2: Manual Azure CLI Deployment
+**Troubleshooting azd Deployment:**
 
-1. **Deploy infrastructure**
-   ```bash
-   cd infrastructure/bicep
-#### Option 2: Manual Azure CLI Deployment
+**✅ What Success Looks Like:**
+- All 4 container apps are running (not just created)
+- Frontend displays the e-commerce interface (not "Hello World")
+- API endpoints return JSON responses (not default pages)
+- `azd logs` shows application startup messages
+- Container images in ACR have your actual application names
 
-1. **Deploy infrastructure**
-   ```bash
-   cd infrastructure/bicep
-   
-   # Create resource group if it doesn't exist
-   az group create --name az-container-apps-demo --location "West US 3"
-   
-   # Deploy the infrastructure
-   az deployment group create \
-     --resource-group az-container-apps-demo \
-     --template-file main.bicep \
-     --parameters @parameters.json
-   ```
+**❌ Signs of Problems:**
+- Container Apps show "Azure Container Apps" or "Hello World" pages
+- APIs return HTML instead of JSON
+- `azd logs` shows repeated restarts or build failures
+- Images in Azure Container Registry are named "azuredocs/containerapps-helloworld"
 
-2. **Build and push container images**
-   ```bash
-   # Get your container registry name from deployment output
-   export ACR_NAME=$(az deployment group show --resource-group az-container-apps-demo --name main --query properties.outputs.acrLoginServer.value -o tsv | cut -d'.' -f1)
-   
-   # Login to ACR
-   az acr login --name $ACR_NAME
-   
-   # Build and push images
-   ./scripts/build-and-push.sh $ACR_NAME
-   ```
+**Common Fixes:**
+```bash
+# If you see starter/hello world pages:
+azd deploy                    # Redeploy application containers
 
-3. **Deploy applications** (if using manual deployment)
-   ```bash
-   # Update container apps with new images
-   az containerapp update --name ecommerce-dev-frontend --resource-group az-container-apps-demo --image $ACR_NAME.azurecr.io/frontend:latest
-   az containerapp update --name ecommerce-dev-order-service --resource-group az-container-apps-demo --image $ACR_NAME.azurecr.io/order-service:latest
-   az containerapp update --name ecommerce-dev-inventory-service --resource-group az-container-apps-demo --image $ACR_NAME.azurecr.io/inventory-service:latest
-   az containerapp update --name ecommerce-dev-notification-service --resource-group az-container-apps-demo --image $ACR_NAME.azurecr.io/notification-service:latest
-   ```
+# If builds are failing:
+azd deploy --debug           # Get detailed build logs
+
+# If environment seems corrupted:
+azd down --force --purge     # Clean everything
+azd up                       # Start fresh
+```
+
+If you see "Hello World" pages instead of your application:
+- This indicates the infrastructure was created but your application containers weren't properly built/deployed
+- Run `azd deploy` again to rebuild and redeploy your application containers
+- Check `azd logs` for build and deployment errors
+
+If Docker build fails:
+- Ensure Docker Desktop is running
+- Check that all Dockerfile paths are correct in `azure.yaml`
+- Verify your source code builds locally: `docker build -t test ./src/frontend`
 
 ## 🚀 Benefits of Azure Developer CLI (azd)
 
 - **Simplified Deployment**: Single command deployment (`azd up`)
+- **Automatic Container Building**: Builds Docker images from your source code automatically
+- **Image Management**: Pushes images to Azure Container Registry and updates Container Apps
 - **Environment Management**: Easy switching between dev/staging/prod environments
 - **Integrated CI/CD**: Built-in GitHub Actions integration
 - **Infrastructure as Code**: Automatic Bicep template management
-- **Container Build & Push**: Automatic Docker image building and registry pushing
 - **Monitoring Integration**: Direct links to Azure Portal monitoring
 - **Rollback Support**: Easy rollback with `azd down` and `azd up`
+
+> **Key Point**: azd starts with placeholder images in the infrastructure, then builds your actual application images and automatically updates the Container Apps. If you see "Hello World" pages, it means the infrastructure deployed successfully but the application images haven't been built/deployed yet.
+
+## � Understanding the azd Deployment Process
+
+When you run `azd up`, here's what happens:
+
+1. **Infrastructure Provisioning** (`azd provision`):
+   - Creates Azure resources using Bicep templates
+   - Container Apps are initially created with placeholder "Hello World" images
+   - Sets up networking, databases, monitoring, etc.
+
+2. **Application Building** (`azd deploy`):
+   - Builds Docker images from your source code in each service directory
+   - Pushes images to Azure Container Registry with proper naming
+   - Updates Container Apps to use your actual application images
+
+3. **Result**:
+   - Your applications replace the placeholder images
+   - Real functionality becomes available
+
+**This is why you might initially see "Hello World" pages** - they indicate successful infrastructure provisioning but incomplete application deployment.
+
+## ✅ Verifying Your Deployment
+
+After running `azd up`, verify everything is working:
+
+### 1. Check Deployment Status
+```bash
+azd show                    # Shows all deployed resources and URLs
+azd logs --follow          # Shows live application logs
+```
+
+### 2. Test Your Applications
+```bash
+# Test the frontend (should show React app, not "Hello World")
+curl -I https://your-frontend-url.azurecontainerapps.io
+
+# Test the APIs (should return JSON, not HTML)
+curl https://your-order-service-url.azurecontainerapps.io/health
+curl https://your-inventory-service-url.azurecontainerapps.io/api/inventory
+```
+
+### 3. Check Azure Portal
+- Go to your resource group in Azure Portal
+- Look at Container Apps - they should show your custom images, not `mcr.microsoft.com/azuredocs/containerapps-helloworld`
+- Check Application Insights for telemetry data
+
+### 4. Expected Behavior
+**✅ Success Signs:**
+- Frontend shows e-commerce interface with product listings
+- API endpoints return JSON responses
+- `azd logs` shows application startup messages (not just "Hello World")
+- Container registry contains images with your app names
+
+**❌ Problem Signs:**
+- "Hello World" or "Azure Container Apps" placeholder pages
+- API endpoints return HTML error pages
+- Empty product lists or non-functional UI
+- Only placeholder images in container registry
+
+### 5. Automated Validation
+Run the included validation script to check your deployment:
+
+**Windows (PowerShell):**
+```powershell
+.\scripts\validate-deployment.ps1
+```
+
+**Linux/macOS (Bash):**
+```bash
+./scripts/validate-deployment.sh
+```
+
+This script will:
+- Test all service endpoints
+- Check container registry for your application images
+- Provide specific remediation steps if issues are found
 
 ## 🔧 Customizing Your Deployment
 
@@ -334,6 +451,40 @@ brew tap azure/azd && brew install azd
 curl -fsSL https://aka.ms/install-azd.sh | bash
 ```
 
+**Problem: Seeing "Hello World" or starter pages instead of your application**
+
+This is the most common issue and indicates that while the infrastructure was created successfully, your application containers weren't properly built or deployed.
+
+**Symptoms:**
+- Container Apps show "Hello World" pages
+- APIs return default responses
+- Application functionality is missing
+
+**Solutions:**
+1. **Redeploy application containers:**
+   ```bash
+   azd deploy
+   ```
+
+2. **Check build logs for errors:**
+   ```bash
+   azd logs --follow
+   ```
+
+3. **Verify Docker is running:**
+   - Ensure Docker Desktop is started
+   - Test local build: `docker build -t test ./src/frontend`
+
+4. **Check azure.yaml configuration:**
+   - Verify docker context paths point to service directories
+   - Ensure Dockerfile paths are correct
+
+5. **Force rebuild:**
+   ```bash
+   azd down --force --purge
+   azd up
+   ```
+
 **Error: "AZURE_PRINCIPAL_ID not set"**
 ```bash
 # Get your user principal ID
@@ -348,6 +499,26 @@ azd env set AZURE_PRINCIPAL_ID $(az ad signed-in-user show --query id -o tsv)
 # Ensure Docker is running and images are built
 azd deploy --debug  # Shows detailed deployment logs
 ```
+
+**Docker Build Issues:**
+
+If container builds are failing:
+1. Check that Docker Desktop is running
+2. Verify build context and Dockerfile paths in `azure.yaml`
+3. Test builds locally:
+   ```bash
+   cd src/frontend && docker build -t frontend-test .
+   cd ../order-service && docker build -t order-test .
+   cd ../inventory-service && docker build -t inventory-test .
+   cd ../notification-service && docker build -t notification-test .
+   ```
+
+**Network/Connectivity Issues:**
+
+If services can't communicate:
+- Check that Dapr is properly configured
+- Verify environment variables are set correctly
+- Use `azd logs` to check for connection errors
 
 **Continuous Deployment with GitHub Actions:**
 

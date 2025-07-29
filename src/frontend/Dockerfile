@@ -1,50 +1,81 @@
-# Multi-stage build for React frontend
-FROM node:18-alpine AS builder
+# Multi-stage build for React frontend with Dapr-enabled Express server
+# This Dockerfile creates a production-ready container that:
+# 1. Builds the React application 
+# 2. Serves it via an Express server with Dapr integration
+# 3. Proxies API calls to backend services through Dapr sidecar
+
+FROM node:18-alpine AS deps
 
 # Set working directory
 WORKDIR /app
 
-# Copy package files
+# Copy package files for React app and install dependencies
 COPY package*.json ./
+RUN npm ci --only=production && npm cache clean --force
 
-# Install dependencies
-RUN npm ci --only=production
+# Copy server package files and install dependencies
+COPY server/package*.json ./server/
+WORKDIR /app/server
+RUN npm ci --only=production && npm cache clean --force
+
+# Build stage - Create React production build
+FROM node:18-alpine AS builder
+
+WORKDIR /app
+
+# Copy package files and install ALL dependencies (including dev dependencies for building)
+COPY package*.json ./
+RUN npm ci && npm cache clean --force
 
 # Copy source code
 COPY . .
 
-# Build the application
+# Build the React application
 RUN npm run build
 
-# Production stage
-FROM nginx:alpine
+# Production stage - Lightweight server container
+FROM node:18-alpine
 
-# Copy custom nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+WORKDIR /app
 
-# Copy built application
-COPY --from=builder /app/build /usr/share/nginx/html
+# Install security updates
+RUN apk --no-cache add dumb-init && \
+    apk --no-cache upgrade
 
-# Create non-root user
+# Copy server dependencies
+COPY --from=deps /app/server/node_modules ./node_modules
+
+# Copy server code
+COPY server/server.js ./
+COPY server/package*.json ./
+
+# Copy built React application
+COPY --from=builder /app/build ./build
+
+# Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
-    adduser -S frontend -u 1001
+    adduser -S frontend -u 1001 -G nodejs
 
-# Change ownership of nginx directories
-RUN chown -R frontend:nodejs /var/cache/nginx && \
-    chown -R frontend:nodejs /var/log/nginx && \
-    chown -R frontend:nodejs /etc/nginx/conf.d && \
-    touch /var/run/nginx.pid && \
-    chown -R frontend:nodejs /var/run/nginx.pid
+# Change ownership of application files
+RUN chown -R frontend:nodejs /app
 
 # Switch to non-root user
 USER frontend
 
-# Expose port
-EXPOSE 80
+# Expose port (documentation only - Container Apps controls actual port mapping)
+EXPOSE 3000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:80/ || exit 1
+# Add environment variables for runtime configuration
+ENV NODE_ENV=production \
+    PORT=3000 \
+    DAPR_HTTP_PORT=3500
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Health check - ensures container is responding correctly
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
+
+# Use dumb-init to handle signal forwarding and zombie reaping
+ENTRYPOINT ["dumb-init", "--"]
+
+# Start the Express server
+CMD ["node", "server.js"]

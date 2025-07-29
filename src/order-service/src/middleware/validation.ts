@@ -50,7 +50,7 @@ export const validateOrderId = [
   handleValidationErrors
 ];
 
-function handleValidationErrors(req: Request, res: Response, next: NextFunction) {
+function handleValidationErrors(req: Request, res: Response, next: NextFunction): Response | void {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({

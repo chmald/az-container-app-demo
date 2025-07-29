@@ -13,14 +13,14 @@ services:
       context: ./
     hooks:
       prebuild:
-        shell: sh
+        shell: pwsh
         run: |
-          if [ "$AZURE_ENV_NAME" != "" ]; then
+          if ($env:AZURE_ENV_NAME) {
             azd env get-values > .env
-          fi
+          }
       postdeploy:
-        shell: sh
-        run: echo "Frontend deployed successfully"
+        shell: pwsh
+        run: Write-Host "Frontend deployed successfully"
   order-service:
     project: ./src/order-service
     language: ts
@@ -30,14 +30,14 @@ services:
       context: ./
     hooks:
       prebuild:
-        shell: sh
+        shell: pwsh
         run: |
-          if [ "$AZURE_ENV_NAME" != "" ]; then
+          if ($env:AZURE_ENV_NAME) {
             azd env get-values > .env
-          fi
+          }
       postdeploy:
-        shell: sh
-        run: echo "Order service deployed successfully"
+        shell: pwsh
+        run: Write-Host "Order service deployed successfully"
   inventory-service:
     project: ./src/inventory-service
     language: python
@@ -47,14 +47,14 @@ services:
       context: ./
     hooks:
       prebuild:
-        shell: sh
+        shell: pwsh
         run: |
-          if [ "$AZURE_ENV_NAME" != "" ]; then
+          if ($env:AZURE_ENV_NAME) {
             azd env get-values > .env
-          fi
+          }
       postdeploy:
-        shell: sh
-        run: echo "Inventory service deployed successfully"
+        shell: pwsh
+        run: Write-Host "Inventory service deployed successfully"
   notification-service:
     project: ./src/notification-service
     language: js
@@ -64,49 +64,49 @@ services:
       context: ./
     hooks:
       prebuild:
-        shell: sh
+        shell: pwsh
         run: |
-          if [ "$AZURE_ENV_NAME" != "" ]; then
+          if ($env:AZURE_ENV_NAME) {
             azd env get-values > .env
-          fi
+          }
       postdeploy:
-        shell: sh
-        run: echo "Notification service deployed successfully"
+        shell: pwsh
+        run: Write-Host "Notification service deployed successfully"
 
 hooks:
   preprovision:
-    shell: sh
+    shell: pwsh
     run: |
-      echo "Starting infrastructure provisioning..."
-      echo "Resource group: $AZURE_RESOURCE_GROUP_NAME"
-      echo "Location: $AZURE_LOCATION"
+      Write-Host "Starting infrastructure provisioning..."
+      Write-Host "Resource group: $env:AZURE_RESOURCE_GROUP_NAME"
+      Write-Host "Location: $env:AZURE_LOCATION"
   postprovision:
-    shell: sh
+    shell: pwsh
     run: |
-      echo "Infrastructure provisioned successfully"
-      echo "Container registry: $AZURE_CONTAINER_REGISTRY_ENDPOINT"
+      Write-Host "Infrastructure provisioned successfully"
+      Write-Host "Container registry: $env:AZURE_CONTAINER_REGISTRY_ENDPOINT"
   prepackage:
-    shell: sh
-    run: echo "Packaging application..."
+    shell: pwsh
+    run: Write-Host "Packaging application..."
   postpackage:
-    shell: sh
-    run: echo "Application packaged successfully"
+    shell: pwsh
+    run: Write-Host "Application packaged successfully"
   predeploy:
-    shell: sh
+    shell: pwsh
     run: |
-      if [ "$OS" = "Windows_NT" ]; then
-        ./scripts/predeploy.bat
-      else
-        ./scripts/predeploy.sh
-      fi
+      if ($env:OS -eq "Windows_NT") {
+        .\scripts\predeploy.bat
+      } else {
+        .\scripts\predeploy.sh
+      }
   postdeploy:
-    shell: sh
+    shell: pwsh
     run: |
-      if [ "$OS" = "Windows_NT" ]; then
-        ./scripts/postdeploy.bat
-      else
-        ./scripts/postdeploy.sh
-      fi
+      if ($env:OS -eq "Windows_NT") {
+        .\scripts\postdeploy.bat
+      } else {
+        .\scripts\postdeploy.sh
+      }
 
 infra:
   provider: bicep

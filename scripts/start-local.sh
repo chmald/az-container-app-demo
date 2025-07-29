@@ -45,8 +45,8 @@ dapr run \
     --app-port 3001 \
     --dapr-http-port 3501 \
     --dapr-grpc-port 50001 \
-    --components-path ../../infrastructure/dapr/components \
-    --config ../../infrastructure/dapr/configuration/config.yaml \
+    --components-path ../../infra/dapr/components \
+    --config ../../infra/dapr/configuration/config.yaml \
     npm start &
 
 cd ../..
@@ -60,8 +60,8 @@ dapr run \
     --app-port 8000 \
     --dapr-http-port 3502 \
     --dapr-grpc-port 50002 \
-    --components-path ../../infrastructure/dapr/components \
-    --config ../../infrastructure/dapr/configuration/config.yaml \
+    --components-path ../../infra/dapr/components \
+    --config ../../infra/dapr/configuration/config.yaml \
     python main.py &
 
 cd ../..
@@ -75,8 +75,8 @@ dapr run \
     --app-port 8080 \
     --dapr-http-port 3503 \
     --dapr-grpc-port 50003 \
-    --components-path ../../infrastructure/dapr/components \
-    --config ../../infrastructure/dapr/configuration/config.yaml \
+    --components-path ../../infra/dapr/components \
+    --config ../../infra/dapr/configuration/config.yaml \
     go run main.go &
 
 cd ../..

@@ -1,7 +1,14 @@
-import { DaprClient } from '@dapr/dapr';
+import { DaprClient, HttpMethod } from '@dapr/dapr';
 import { Order, OrderItem, OrderStatus, CreateOrderRequest } from '../models/Order';
 import { v4 as uuidv4 } from 'uuid';
 import logger from '../utils/logger';
+
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+}
 
 export class OrderService {
   private daprClient: DaprClient;
@@ -89,10 +96,10 @@ export class OrderService {
           const productResponse = await this.daprClient.invoker.invoke(
             'inventory-service',
             `api/inventory/${item.productId}`,
-            'GET'
+            HttpMethod.GET
           );
 
-          const product = productResponse;
+          const product = productResponse as Product;
           const orderItem: OrderItem = {
             productId: item.productId,
             productName: product.name || `Product ${item.productId}`,

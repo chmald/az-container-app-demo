@@ -12,6 +12,9 @@ param location string
 @description('Principal ID of the user or service principal to grant Key Vault access')
 param principalId string = ''
 
+@description('Name of the resource group')
+param resourceGroupName string = ''
+
 // Tags that should be applied to all resources.
 var tags = {
   'azd-env-name': environmentName
@@ -20,12 +23,9 @@ var tags = {
 // Generate a unique token to be used in naming resources.
 var resourceToken = toLower(uniqueString(subscription().id, location, environmentName))
 
-// Name of the resource group to create
-var resourceGroupName = 'rg-${environmentName}'
-
 // Create resource group
 resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' = {
-  name: resourceGroupName
+  name: resourceGroupName != '' ? resourceGroupName : 'rg-${environmentName}'
   location: location
   tags: tags
 }
