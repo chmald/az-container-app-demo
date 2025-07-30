@@ -1,11 +1,13 @@
 import { configureStore } from '@reduxjs/toolkit';
 import inventoryReducer from './inventorySlice';
 import orderReducer from './orderSlice';
+import notificationReducer from './notificationSlice';
 
 export const store = configureStore({
   reducer: {
     inventory: inventoryReducer,
     orders: orderReducer,
+    notifications: notificationReducer,
   },
 });
 

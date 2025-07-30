@@ -30,8 +30,17 @@ api.interceptors.response.use(
 );
 
 export const inventoryApi = {
-  getProducts: async (): Promise<Product[]> => {
-    const response = await api.get('/api/proxy/inventory');
+  getProducts: async (params?: {
+    page?: number;
+    pageSize?: number;
+    search?: string;
+  }): Promise<Product[]> => {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.pageSize) queryParams.append('pageSize', params.pageSize.toString());
+    if (params?.search) queryParams.append('search', params.search);
+    
+    const response = await api.get(`/api/proxy/inventory?${queryParams}`);
     return response.data.data || response.data;
   },
 
@@ -40,10 +49,26 @@ export const inventoryApi = {
     return response.data.data || response.data;
   },
 
-  updateInventory: async (id: string, quantity: number): Promise<Product> => {
-    const response = await api.put(`/api/proxy/inventory/${id}`, {
+  createProduct: async (product: Omit<Product, 'id'>): Promise<Product> => {
+    const response = await api.post('/api/proxy/inventory', product);
+    return response.data.data || response.data;
+  },
+
+  updateProduct: async (id: string, product: Partial<Product>): Promise<Product> => {
+    const response = await api.put(`/api/proxy/inventory/${id}`, product);
+    return response.data.data || response.data;
+  },
+
+  updateInventoryQuantity: async (id: string, quantity: number): Promise<Product> => {
+    const response = await api.put(`/api/proxy/inventory/${id}/quantity`, {
       quantity,
     });
+    return response.data.data || response.data;
+  },
+
+  getLowStockProducts: async (threshold?: number): Promise<Product[]> => {
+    const queryParams = threshold ? `?threshold=${threshold}` : '';
+    const response = await api.get(`/api/proxy/inventory/alerts/low-stock${queryParams}`);
     return response.data.data || response.data;
   },
 };
@@ -73,17 +98,52 @@ export const orderApi = {
 };
 
 export const notificationApi = {
-  sendNotification: async (type: string, message: string, userId?: string): Promise<any> => {
-    const response = await api.post('/api/proxy/notifications/notify', {
-      type,
-      message,
-      userId,
-    });
+  sendNotification: async (notificationData: {
+    type: string;
+    message: string;
+    recipient?: string;
+    metadata?: any;
+  }): Promise<any> => {
+    const response = await api.post('/api/proxy/notifications', notificationData);
     return response.data;
   },
 
+  getNotification: async (id: string): Promise<any> => {
+    const response = await api.get(`/api/proxy/notifications/${id}`);
+    return response.data.data || response.data;
+  },
+
+  getNotificationHistory: async (params?: {
+    recipient?: string;
+    limit?: number;
+  }): Promise<any[]> => {
+    const queryParams = new URLSearchParams();
+    if (params?.recipient) queryParams.append('recipient', params.recipient);
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    
+    const response = await api.get(`/api/proxy/notifications/history?${queryParams}`);
+    return response.data.data || response.data;
+  },
+
   healthCheck: async (): Promise<any> => {
-    const response = await api.get('/api/proxy/notifications/health');
+    const response = await api.get('/api/proxy/service/health');
+    return response.data;
+  },
+};
+
+export const serviceApi = {
+  healthCheck: async (): Promise<any> => {
+    const response = await api.get('/api/proxy/health');
+    return response.data;
+  },
+
+  serviceInvoke: async (method: string, data?: any): Promise<any> => {
+    const response = await api.post(`/api/proxy/service/${method}`, data);
+    return response.data;
+  },
+
+  getDaprMetadata: async (): Promise<any> => {
+    const response = await api.get('/api/proxy/service/dapr-metadata');
     return response.data;
   },
 };

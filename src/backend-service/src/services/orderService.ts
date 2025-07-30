@@ -15,45 +15,108 @@ export class OrderService {
 
   async getAllOrders(): Promise<Order[]> {
     try {
-      // In a real implementation, this would query the state store
-      // For demo purposes, return sample data
-      const sampleOrders: Order[] = [
-        {
-          id: 'order-001',
-          customerId: 'customer-001',
-          items: [
-            {
-              productId: 'product-001',
-              productName: 'Gaming Laptop',
-              quantity: 1,
-              price: 1899.99
+      // Try to get all orders from state store
+      const orders: Order[] = [];
+      
+      try {
+        // In a production system, you would need to implement proper state querying
+        // For demo purposes, we'll combine state store retrieval with sample data
+        
+        // Get sample orders and try to load them from state store
+        const sampleOrderIds = ['order-001', 'order-002'];
+        
+        for (const orderId of sampleOrderIds) {
+          try {
+            const storedOrder = await this.daprService.getState<Order>(this.storeName, `order-${orderId}`);
+            if (storedOrder) {
+              orders.push(storedOrder);
             }
-          ],
-          total: 1899.99,
-          status: OrderStatus.CONFIRMED,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        },
-        {
-          id: 'order-002',
-          customerId: 'customer-002',
-          items: [
-            {
-              productId: 'product-002',
-              productName: 'Wireless Mouse',
-              quantity: 2,
-              price: 29.99
-            }
-          ],
-          total: 59.98,
-          status: OrderStatus.SHIPPED,
-          createdAt: new Date(Date.now() - 86400000).toISOString(),
-          updatedAt: new Date().toISOString()
+          } catch (error) {
+            logger.debug('Could not retrieve order from state store', { orderId, error });
+          }
         }
-      ];
+        
+        // If no orders in state store, use sample data
+        if (orders.length === 0) {
+          const sampleOrders: Order[] = [
+            {
+              id: 'order-001',
+              customerId: 'customer-001',
+              items: [
+                {
+                  productId: 'product-001',
+                  productName: 'Gaming Laptop',
+                  quantity: 1,
+                  price: 1899.99
+                }
+              ],
+              total: 1899.99,
+              status: OrderStatus.CONFIRMED,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            },
+            {
+              id: 'order-002',
+              customerId: 'customer-002',
+              items: [
+                {
+                  productId: 'product-002',
+                  productName: 'Wireless Mouse',
+                  quantity: 2,
+                  price: 29.99
+                }
+              ],
+              total: 59.98,
+              status: OrderStatus.SHIPPED,
+              createdAt: new Date(Date.now() - 86400000).toISOString(),
+              updatedAt: new Date().toISOString()
+            }
+          ];
+          orders.push(...sampleOrders);
+        }
+      } catch (error) {
+        logger.warn('Could not retrieve from state store, using sample data', { error });
+        
+        // Fallback to sample data
+        const sampleOrders: Order[] = [
+          {
+            id: 'order-001',
+            customerId: 'customer-001',
+            items: [
+              {
+                productId: 'product-001',
+                productName: 'Gaming Laptop',
+                quantity: 1,
+                price: 1899.99
+              }
+            ],
+            total: 1899.99,
+            status: OrderStatus.CONFIRMED,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          },
+          {
+            id: 'order-002',
+            customerId: 'customer-002',
+            items: [
+              {
+                productId: 'product-002',
+                productName: 'Wireless Mouse',
+                quantity: 2,
+                price: 29.99
+              }
+            ],
+            total: 59.98,
+            status: OrderStatus.SHIPPED,
+            createdAt: new Date(Date.now() - 86400000).toISOString(),
+            updatedAt: new Date().toISOString()
+          }
+        ];
+        orders.push(...sampleOrders);
+      }
 
-      logger.info('Retrieved all orders', { count: sampleOrders.length });
-      return sampleOrders;
+      logger.info('Retrieved all orders', { count: orders.length, fromStateStore: orders.length > 0 });
+      return orders;
     } catch (error) {
       logger.error('Error retrieving orders', { error });
       throw error;

@@ -106,6 +106,8 @@ const createServiceProxy = (serviceName, basePath) => {
 app.use('/api/proxy/orders', createServiceProxy('backend-service', '/api/orders'));
 app.use('/api/proxy/inventory', createServiceProxy('backend-service', '/api/inventory'));
 app.use('/api/proxy/notifications', createServiceProxy('backend-service', '/api/notifications'));
+app.use('/api/proxy/service', createServiceProxy('backend-service', '/dapr/service'));
+app.use('/api/proxy/health', createServiceProxy('backend-service', '/health'));
 
 // Additional health endpoints for monitoring
 app.get('/api/health/detailed', async (req, res) => {

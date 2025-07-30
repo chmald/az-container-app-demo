@@ -41,10 +41,20 @@ export const initializeDaprRoutes = (notificationService: NotificationService): 
       
       await notificationService.handleOrderCreated(event);
       
-      res.status(200).json({ success: true });
+      // Send acknowledgment
+      res.status(200).json({ 
+        success: true, 
+        message: 'Order created event processed successfully',
+        orderId: event.orderId 
+      });
     } catch (error) {
       logger.error('Error handling order created event', { error });
-      res.status(500).json({ success: false, error: 'Failed to process event' });
+      // Return 500 to tell Dapr to retry the message
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to process order created event',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 
@@ -55,10 +65,21 @@ export const initializeDaprRoutes = (notificationService: NotificationService): 
       
       await notificationService.handleOrderStatusUpdated(event);
       
-      res.status(200).json({ success: true });
+      // Send acknowledgment
+      res.status(200).json({ 
+        success: true, 
+        message: 'Order status updated event processed successfully',
+        orderId: event.orderId,
+        status: event.status
+      });
     } catch (error) {
       logger.error('Error handling order status updated event', { error });
-      res.status(500).json({ success: false, error: 'Failed to process event' });
+      // Return 500 to tell Dapr to retry the message
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to process order status updated event',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 
@@ -69,10 +90,21 @@ export const initializeDaprRoutes = (notificationService: NotificationService): 
       
       await notificationService.handleInventoryAlert(event);
       
-      res.status(200).json({ success: true });
+      // Send acknowledgment
+      res.status(200).json({ 
+        success: true, 
+        message: 'Inventory alert event processed successfully',
+        productId: event.productId,
+        currentQuantity: event.currentQuantity
+      });
     } catch (error) {
       logger.error('Error handling inventory alert event', { error });
-      res.status(500).json({ success: false, error: 'Failed to process event' });
+      // Return 500 to tell Dapr to retry the message
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to process inventory alert event',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 

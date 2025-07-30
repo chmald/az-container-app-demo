@@ -323,12 +323,23 @@ resource daprStateStore 'Microsoft.App/managedEnvironments/daprComponents@2023-0
         name: 'enableTLS'
         value: 'true'
       }
+      {
+        name: 'maxRetries'
+        value: '3'
+      }
+      {
+        name: 'maxRetryBackoff'
+        value: '2s'
+      }
     ]
     secrets: [
       {
         name: 'redis-password'
         value: redisCache.listKeys().primaryKey
       }
+    ]
+    scopes: [
+      'backend-service'
     ]
   }
 }
@@ -353,12 +364,27 @@ resource daprPubSub 'Microsoft.App/managedEnvironments/daprComponents@2023-05-01
         name: 'enableTLS'
         value: 'true'
       }
+      {
+        name: 'maxRetries'
+        value: '3'
+      }
+      {
+        name: 'maxRetryBackoff'
+        value: '2s'
+      }
+      {
+        name: 'concurrency'
+        value: '10'
+      }
     ]
     secrets: [
       {
         name: 'redis-password'
         value: redisCache.listKeys().primaryKey
       }
+    ]
+    scopes: [
+      'backend-service'
     ]
   }
 }

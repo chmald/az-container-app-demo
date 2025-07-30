@@ -77,21 +77,59 @@ export class InventoryService {
 
   async getAllProducts(page = 1, pageSize = 10): Promise<PaginatedResponse<Product>> {
     try {
+      // Try to get products from state store first, fallback to sample data
+      let allProducts: Product[] = [];
+      
+      try {
+        // Try to load known products from state store
+        const sampleProductIds = ['product-001', 'product-002', 'product-003', 'product-004', 'product-005'];
+        
+        for (const productId of sampleProductIds) {
+          try {
+            const storedProduct = await this.daprService.getState<Product>(this.storeName, `product-${productId}`);
+            if (storedProduct) {
+              allProducts.push(storedProduct);
+            }
+          } catch (error) {
+            logger.debug('Could not retrieve product from state store', { productId, error });
+          }
+        }
+        
+        // If no products in state store, initialize with sample data and save them
+        if (allProducts.length === 0) {
+          allProducts = [...this.sampleProducts];
+          
+          // Save sample products to state store for future retrieval
+          for (const product of this.sampleProducts) {
+            try {
+              await this.daprService.saveState(this.storeName, `product-${product.id}`, product);
+            } catch (error) {
+              logger.warn('Could not save product to state store during initialization', { productId: product.id, error });
+            }
+          }
+          logger.info('Initialized products in state store', { count: allProducts.length });
+        }
+      } catch (error) {
+        logger.warn('Could not retrieve from state store, using sample data', { error });
+        allProducts = [...this.sampleProducts];
+      }
+
       const start = (page - 1) * pageSize;
       const end = start + pageSize;
-      const products = this.sampleProducts.slice(start, end);
+      const products = allProducts.slice(start, end);
 
       logger.info('Retrieved products', { 
         page, 
         pageSize, 
-        total: this.sampleProducts.length,
-        returned: products.length 
+        total: allProducts.length,
+        returned: products.length,
+        fromStateStore: allProducts.length > 0
       });
 
       return {
         success: true,
         data: products,
-        total: this.sampleProducts.length,
+        total: allProducts.length,
         page,
         pageSize,
         message: `Retrieved ${products.length} products`

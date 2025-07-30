@@ -46,6 +46,17 @@ export class DaprService {
     }
   }
 
+  async saveMultipleStates(storeName: string, keyValuePairs: Array<{ key: string, value: any }>): Promise<void> {
+    try {
+      const client = this.getClient();
+      await client.state.save(storeName, keyValuePairs);
+      logger.debug('Multiple states saved successfully', { storeName, count: keyValuePairs.length });
+    } catch (error) {
+      logger.error('Failed to save multiple states', { storeName, count: keyValuePairs.length, error });
+      throw error;
+    }
+  }
+
   async getState<T>(storeName: string, key: string): Promise<T | null> {
     try {
       const client = this.getClient();
@@ -65,6 +76,44 @@ export class DaprService {
       logger.debug('State deleted successfully', { storeName, key });
     } catch (error) {
       logger.error('Failed to delete state', { storeName, key, error });
+      throw error;
+    }
+  }
+
+  async getMultipleStates<T>(storeName: string, keys: string[]): Promise<Array<{ key: string, value: T | null }>> {
+    try {
+      const client = this.getClient();
+      const results: Array<{ key: string, value: T | null }> = [];
+      
+      // Dapr client doesn't have built-in bulk get, so we'll do individual gets
+      // In production, consider using bulk operations or state store specific features
+      for (const key of keys) {
+        try {
+          const value = await client.state.get(storeName, key);
+          results.push({ key, value: value as T });
+        } catch (error) {
+          logger.warn('Failed to get state for key', { storeName, key, error });
+          results.push({ key, value: null });
+        }
+      }
+      
+      logger.debug('Multiple states retrieved', { storeName, requestedKeys: keys.length, retrievedKeys: results.length });
+      return results;
+    } catch (error) {
+      logger.error('Failed to get multiple states', { storeName, keys, error });
+      throw error;
+    }
+  }
+
+  // Transaction-like operations using state store ETags (if supported)
+  async saveStateWithETag(storeName: string, key: string, value: any, etag?: string): Promise<void> {
+    try {
+      const client = this.getClient();
+      const stateItem = etag ? { key, value, etag } : { key, value };
+      await client.state.save(storeName, [stateItem]);
+      logger.debug('State saved with ETag', { storeName, key, hasETag: !!etag });
+    } catch (error) {
+      logger.error('Failed to save state with ETag', { storeName, key, error });
       throw error;
     }
   }

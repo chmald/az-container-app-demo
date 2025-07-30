@@ -11,6 +11,7 @@ import { initializeOrderRoutes } from './routes/orderRoutes';
 import { initializeInventoryRoutes } from './routes/inventoryRoutes';
 import { initializeNotificationRoutes } from './routes/notificationRoutes';
 import { initializeDaprRoutes } from './routes/daprRoutes';
+import { initializeServiceRoutes } from './routes/serviceRoutes';
 import { errorHandler, notFoundHandler, requestLogger } from './middleware/errorHandler';
 import logger from './utils/logger';
 import { DaprService } from './dapr/daprService';
@@ -113,11 +114,13 @@ const orderRoutes = initializeOrderRoutes(orderController);
 const inventoryRoutes = initializeInventoryRoutes(inventoryController);
 const notificationRoutes = initializeNotificationRoutes(notificationController);
 const daprRoutes = initializeDaprRoutes(notificationService);
+const serviceRoutes = initializeServiceRoutes(daprService);
 
 app.use('/api', orderRoutes);
 app.use('/api', inventoryRoutes);
 app.use('/api', notificationRoutes);
 app.use('/dapr', daprRoutes);
+app.use('/dapr', serviceRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -131,7 +134,19 @@ app.get('/', (req, res) => {
       inventory: '/api/inventory',
       notifications: '/api/notifications',
       docs: '/api/docs',
-      health: '/health'
+      health: '/health',
+      dapr: {
+        subscribe: '/dapr/subscribe',
+        service: '/dapr/service',
+        metadata: '/dapr/service/dapr-metadata'
+      }
+    },
+    dapr: {
+      enabled: true,
+      appId: 'backend-service',
+      connected: daprService.isConnected(),
+      components: ['statestore', 'pubsub'],
+      features: ['state-management', 'pub-sub', 'service-invocation']
     }
   });
 });

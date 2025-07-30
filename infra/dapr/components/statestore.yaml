@@ -7,8 +7,10 @@ spec:
   version: v1
   metadata:
   - name: redisHost
-    value: redis:6379
+    value: "{redis-host}"
   - name: redisPassword
-    value: ""
+    value: "{redis-password}"
   - name: enableTLS
-    value: false
+    value: "true"
+scopes:
+- backend-service

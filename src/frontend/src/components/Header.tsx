@@ -1,7 +1,7 @@
 import React from 'react';
 import { AppBar, Toolbar, Typography, Button, Box } from '@mui/material';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
-import { Store, ShoppingCart, Dashboard } from '@mui/icons-material';
+import { Store, ShoppingCart, Dashboard, Notifications } from '@mui/icons-material';
 
 const Header: React.FC = () => {
   const location = useLocation();
@@ -10,6 +10,7 @@ const Header: React.FC = () => {
     { path: '/', label: 'Dashboard', icon: <Dashboard /> },
     { path: '/inventory', label: 'Inventory', icon: <Store /> },
     { path: '/orders', label: 'Orders', icon: <ShoppingCart /> },
+    { path: '/notifications', label: 'Notifications', icon: <Notifications /> },
   ];
 
   return (

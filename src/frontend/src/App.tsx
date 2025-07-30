@@ -5,6 +5,7 @@ import Header from './components/Header';
 import Dashboard from './pages/Dashboard';
 import InventoryPage from './pages/InventoryPage';
 import OrdersPage from './pages/OrdersPage';
+import NotificationsPage from './pages/NotificationsPage';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/inventory" element={<InventoryPage />} />
           <Route path="/orders" element={<OrdersPage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
         </Routes>
       </Container>
     </Box>
